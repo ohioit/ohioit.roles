@@ -1,0 +1,117 @@
+{
+  "name": "devcontainer-ohioit-roles",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker": "latest",
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers-extra/features/mise:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "blueglassblock.better-json5",
+        "davidanson.vscode-markdownlint",
+        "dnut.rewrap-revived",
+        "editorconfig.editorconfig",
+        "esbenp.prettier-vscode",
+        "fanaticpythoner.better-todo-tree",
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-python.vscode-python-envs",
+        "ms-vscode-remote.vscode-remote-extensionpack",
+        "redhat.ansible",
+        "redhat.vscode-yaml",
+        "streetsidesoftware.code-spell-checker-cspell-bundled-dictionaries",
+        "tamasfe.even-better-toml",
+        "vscode-icons-team.vscode-icons",
+        "yzhang.markdown-all-in-one"
+      ],
+      "settings": {
+        "ansible.ansible.path": "${containerWorkspaceFolder}/.venv/bin/ansible",
+        "ansible.ansibleNavigator.path": "${containerWorkspaceFolder}/.venv/bin/ansible-navigator",
+        "ansible.python.activationScript": "${containerWorkspaceFolder}/.venv/bin/activate",
+        "ansible.python.interpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "ansible.validation.lint.path": "${containerWorkspaceFolder}/.venv/bin/ansible-lint",
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "[ansible]": {
+          "editor.defaultFormatter": "redhat.vscode-yaml",
+          "editor.formatOnSave": true
+        },
+        "[github-actions-workflow]": {
+          "editor.defaultFormatter": "redhat.vscode-yaml",
+          "editor.formatOnSave": true
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[json5]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[markdown]": {
+          "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+          "editor.formatOnSave": true,
+          "editor.rulers": [80, 120],
+          "rewrap.autoWrap.enabled": true
+        },
+        "[yaml]": {
+          "editor.defaultFormatter": "redhat.vscode-yaml",
+          "editor.formatOnSave": true
+        },
+        "better-todo-tree.filtering.excludeGlobs": [
+          "**/docs/*/**",
+          "**/collections/ansible_collections/*/**",
+          "**/*.md"
+        ],
+        "better-todo-tree.general.tags": [
+          "AUDIT",
+          "BUG",
+          "FIXME",
+          "HACK",
+          "TODO"
+        ],
+        "better-todo-tree.highlights.customHighlight": {
+          "AUDIT": {
+            "icon": "search"
+          }
+        },
+        "editor.rulers": [80, 160],
+        "files.trimFinalNewlines": true,
+        "git.autofetch": true,
+        "git.blame.editorDecoration.enabled": true,
+        "git.blame.editorDecoration.template": "${authorName} (${authorDateAgo}) ${subject}",
+        "git.confirmSync": false,
+        "markdown.extension.list.indentationSize": "inherit",
+        "markdown.extension.toc.levels": "1..6",
+        "redhat.telemetry.enabled": false,
+        "rewrap.autoWrap.enabled": true,
+        "telemetry.feedback.enabled": false,
+        "telemetry.telemetryLevel": "off",
+        "vale.enableSpellcheck": true,
+        "vscode.env.isTelemetryEnabled": false,
+        "vsicons.dontShowNewVersionMessage": true,
+        "workbench.iconTheme": "vscode-icons",
+        "yaml.customTags": ["!vault scalar"]
+      }
+    }
+  },
+  "postCreateCommand": "chmod +x ${PROJECT_HOME}/.devcontainer/postCreateCommand.sh && ${PROJECT_HOME}/.devcontainer/postCreateCommand.sh",
+  "remoteEnv": {
+    // "ANSIBLE_VAULT_IDENTITY_LIST": "standard@~/.vault-pass.standard,privileged@~/.vault-pass.privileged",
+    "HOST_HOME": "${localEnv:HOME}",
+    "PROJECT_HOME": "${containerWorkspaceFolder}",
+    "REMOTE_USER": "vscode"
+  },
+  "mounts": [
+    "source=${localEnv:HOME},target=${localEnv:HOME},type=bind,readonly",
+    "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,readonly",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
+  ]
+}

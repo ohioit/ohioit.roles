@@ -1,0 +1,30 @@
+---
+name: Pull Request Labeler
+on:
+  # pull_request_target:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      # - assigned
+      # - edited
+      # - labeled
+      # - unlabeled
+
+jobs:
+  labeler:
+    name: Labeler
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Add labels to pull request
+        uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b # v6
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          sync-labels: true

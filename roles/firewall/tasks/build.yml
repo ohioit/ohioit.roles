@@ -1,0 +1,230 @@
+---
+# Turns `firewall_rules` into the work that main.yml carries out.
+#
+#   __fw_add          objects to create, for the firewall system role
+#   __fw_remove       objects to delete, for the firewall system role
+#   __fw_rich         rich rules that should be present
+#   __fw_rich_stale   rich rules on the host that are not defined here
+#   __fw_extra        the raw `firewall_extra` entries, applied last, never pruned
+#   __fw_keep         names pruning must leave alone, `firewall_keep` minus
+#                     anything `firewall_rules` already accounts for
+#   __fw_revert       services to reset to their built-in definition rather
+#                     than delete, because firewalld ships one of the same name
+
+- name: Start from an empty configuration
+  ansible.builtin.set_fact:
+    __fw_parts: []
+    __fw_rich: []
+    __fw_rich_stale: []
+    __fw_revert: []
+    __fw_stale_zones: []
+    __fw_add: []
+    __fw_remove: []
+    __fw_extra: "{{ firewall_extra }}"
+    # the services under /usr/lib/firewalld, which behave differently from the
+    # custom ones in /etc/firewalld: they cannot be deleted, only reset
+    __fw_builtin_services: "{{ firewall_config.default.services | default({}) | list }}"
+    # names the raw entries mention, so that pruning leaves them alone
+    __fw_extra_services: "{{ firewall_extra | selectattr('service', 'defined') | map(attribute='service') | flatten | list }}"
+    __fw_extra_ipsets: "{{ firewall_extra | selectattr('ipset', 'defined') | map(attribute='ipset') | list }}"
+    __fw_extra_rich: "{{ firewall_extra | selectattr('rich_rule', 'defined') | map(attribute='rich_rule') | flatten | list }}"
+
+- name: Expand each rule into the firewalld objects it implies
+  ansible.builtin.set_fact:
+    __fw_parts: "{{ __fw_parts + [__fw_part] }}"
+  loop: "{{ firewall_rules }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    # "McKee Power Meter" -> "mckee-power-meter", unless `service` says otherwise
+    __svc: >-
+      {{ item.service | default(item.name | lower
+         | regex_replace('[^a-z0-9]+', '-') | regex_replace('^-+|-+$', '')) }}
+    __sources: "{{ [item.sourceip | default([])] | flatten | map('string') | list }}"
+    # a bare address is a host, anything with a prefix length is a network
+    __hosts: "{{ __sources | reject('search', '/') | list }}"
+    __nets: "{{ __sources | select('search', '/') | list }}"
+    __fw_part:
+      name: "{{ item.name }}"
+      service: "{{ __svc }}"
+      zone: "{{ item.zone | default(firewall_zone) }}"
+      family: "{{ item.family | default('ipv4') }}"
+      # 3389 -> 3389/tcp, while 22000/udp is left alone
+      ports: >-
+        {{ [item.port | default([])] | flatten | map('string')
+           | map('regex_replace', '^([^/]+)$', '\1/' ~ (item.protocol | default('tcp'))) | list }}
+      ipsets: >-
+        {{ ([{'name': __svc ~ '-ip', 'type': 'hash:ip', 'entries': __hosts}] if __hosts | length > 0 else [])
+         + ([{'name': __svc ~ '-net', 'type': 'hash:net', 'entries': __nets}] if __nets | length > 0 else []) }}
+
+- name: Check that the generated names are usable
+  ansible.builtin.assert:
+    that:
+      - item.service | length > 0
+      - item.service is match('^[a-z0-9][a-z0-9_-]*$')
+      - ((item.ipsets | map(attribute='name') | map('length') | list) + [0]) | max <= 32
+      - item.family in ['ipv4', 'ipv6']
+    fail_msg: "firewall_rules entry '{{ item.name }}' produces an unusable service or ipset name"
+    quiet: true
+  loop: "{{ __fw_parts }}"
+  loop_control:
+    label: "{{ item.service }}"
+
+# A definition written to /etc/firewalld/services is layered over the shipped
+# one of the same name rather than replacing it, so the service ends up with
+# the declared ports *plus* whatever firewalld ships.  Where the shipped ports
+# are already among the declared ones -- `syncthing`, say -- that is harmless
+# and the result still matches the declaration.  Where they are not, the host
+# quietly gets a port nobody asked for, and the run that later stops declaring
+# the rule fails with BUILTIN_SERVICE because firewalld will not delete a
+# definition it also ships.
+- name: Check that no rule inherits ports from a service firewalld ships
+  ansible.builtin.assert:
+    that: __fw_builtin_ports | difference(item.ports) | length == 0
+    fail_msg: >-
+      firewall_rules entry '{{ item.name }}' declares ports on '{{ item.service }}',
+      but firewalld ships a service of that name carrying
+      {{ __fw_builtin_ports | difference(item.ports) | join(', ') }}.  Those would
+      be added to the ports declared here rather than replaced by them.  Give the
+      rule its own name with `service:`, or add the missing ports to `port:` if
+      you meant to keep them.
+    quiet: true
+  loop: "{{ __fw_parts | selectattr('ports') | list }}"
+  loop_control:
+    label: "{{ item.service }}"
+  vars:
+    __fw_builtin_ports: >-
+      {{ firewall_config.default.services[item.service].ports
+         | default([]) | map('join', '/') | list }}
+
+- name: Bind every ipset to its service with a rich rule
+  ansible.builtin.set_fact:
+    __fw_rich: "{{ __fw_rich + [{'zone': item.0.zone, 'rule': __rule}] }}"
+  loop: "{{ __fw_parts | subelements('ipsets') }}"
+  loop_control:
+    label: "{{ item.1.name }}"
+  vars:
+    # attribute order matches the way firewalld writes rich rules back out
+    __rule: 'rule family="{{ item.0.family }}" source ipset="{{ item.1.name }}" service name="{{ item.0.service }}" accept'
+
+# ---------------------------------------------------------------- additions
+
+- name: Define a custom service for every rule that lists ports
+  ansible.builtin.set_fact:
+    __fw_add: "{{ __fw_add + [{'service': [item.service], 'description': item.name,
+                               'port': item.ports, 'state': 'present', 'permanent': true}] }}"
+  loop: "{{ __fw_parts | selectattr('ports') | list }}"
+  loop_control:
+    label: "{{ item.service }}"
+
+- name: Define an ipset for every kind of source address
+  ansible.builtin.set_fact:
+    __fw_add: "{{ __fw_add + [{'ipset': item.1.name, 'ipset_type': item.1.type,
+                               'ipset_entries': item.1.entries, 'ipset_options': __options,
+                               'description': item.0.name ~ ' sources',
+                               'state': 'present', 'permanent': true}] }}"
+  loop: "{{ __fw_parts | subelements('ipsets') }}"
+  loop_control:
+    label: "{{ item.1.name }}"
+  vars:
+    __options: "{{ {'family': 'inet6'} if item.0.family == 'ipv6' else {} }}"
+
+- name: Open rules that name no source to the whole zone
+  ansible.builtin.set_fact:
+    __fw_add: "{{ __fw_add + [{'zone': item.zone, 'service': [item.service],
+                               'state': 'enabled', 'permanent': true}] }}"
+  loop: "{{ __fw_parts | rejectattr('ipsets') | list }}"
+  loop_control:
+    label: "{{ item.service }}"
+
+# ---------------------------------------------------------------- removals
+
+- name: Work out what is configured on the host but not defined here
+  when: firewall_prune | bool
+  block:
+    # A name the rules mention is governed by the rules, not by the keep list,
+    # so `- name: ssh` with a `sourceip` still moves ssh out of the zone and
+    # into a rich rule.  The keep list only covers what the rules are silent
+    # about -- on a fresh CentOS 10 host that is ssh and cockpit, both already
+    # written into /etc/firewalld/zones/public.xml before Ansible ever runs.
+    - name: Work out which names the keep list still has to protect
+      ansible.builtin.set_fact:
+        __fw_keep: "{{ firewall_keep | difference(__fw_parts | map(attribute='service') | list) }}"
+
+    - name: Check that something still accounts for ssh
+      ansible.builtin.assert:
+        that: "'ssh' in (__fw_parts | map(attribute='service') | list) + firewall_keep"
+        fail_msg: >-
+          pruning would close ssh: no firewall_rules entry resolves to the ssh
+          service and firewall_keep does not list it.  Add `- name: ssh` to the
+          rules, add ssh to firewall_keep, or set firewall_require_ssh to false
+          if this host is not managed over ssh.
+        quiet: true
+      when: firewall_require_ssh | bool
+
+    - name: Compare each managed zone with the rules that target it
+      ansible.builtin.set_fact:
+        __fw_stale_zones: "{{ __fw_stale_zones + [__stale] }}"
+      loop: "{{ ((__fw_parts | map(attribute='zone') | list) + [firewall_zone]) | unique | sort }}"
+      loop_control:
+        label: "{{ item }}"
+      vars:
+        __zone: "{{ firewall_config.custom_permanent_with_defaults.zones[item] | default({}) }}"
+        __keep_services: >-
+          {{ (__fw_parts | rejectattr('ipsets') | selectattr('zone', 'eq', item)
+              | map(attribute='service') | list) + __fw_extra_services }}
+        __keep_rich: >-
+          {{ (__fw_rich | selectattr('zone', 'eq', item) | map(attribute='rule') | list)
+             + __fw_extra_rich }}
+        # firewalld renamed a zone's rich rule list between releases: its
+        # export_config_dict() returns `rules_str` on 0.9 (RHEL 8) and 1.3
+        # (RHEL 9), and `rich_rule` on 2.x (RHEL 10).  Reading only one of the
+        # two silently prunes no rich rules at all.
+        __zone_rich: "{{ __zone.rich_rule | default(__zone.rules_str | default([])) }}"
+        __stale_rich: "{{ __zone_rich | difference(__keep_rich) }}"
+        # a hand-written rich rule pointing at a kept service is kept with it
+        __keep_rich_re: 'service name="({{ __fw_keep | map("regex_escape") | join("|") }})"'
+        __stale:
+          zone: "{{ item }}"
+          services: "{{ __zone.services | default([]) | difference(__keep_services) | difference(__fw_keep) }}"
+          rich_rules: >-
+            {{ __stale_rich | reject('search', __keep_rich_re) | list
+               if __fw_keep | length > 0 else __stale_rich }}
+
+    - name: Collect the rich rules that are no longer defined
+      ansible.builtin.set_fact:
+        __fw_rich_stale: "{{ __fw_rich_stale + [{'zone': item.0.zone, 'rule': item.1}] }}"
+      loop: "{{ __fw_stale_zones | subelements('rich_rules') }}"
+      loop_control:
+        label: "{{ item.1 }}"
+
+    - name: Drop zone services that are no longer defined
+      ansible.builtin.set_fact:
+        __fw_remove: "{{ __fw_remove + [{'zone': item.zone, 'service': item.services,
+                                         'state': 'disabled', 'permanent': true}] }}"
+      loop: "{{ __fw_stale_zones | selectattr('services') | list }}"
+      loop_control:
+        label: "{{ item.zone }}"
+
+    - name: Drop ipsets that are no longer defined
+      ansible.builtin.set_fact:
+        __fw_remove: "{{ __fw_remove + [{'ipset': item, 'state': 'absent', 'permanent': true}] }}"
+      loop: >-
+        {{ (firewall_config.custom_permanent.ipsets | default({}) | list)
+           | difference(__fw_parts | map(attribute='ipsets') | flatten | map(attribute='name') | list)
+           | difference(__fw_extra_ipsets) | difference(__fw_keep) | sort }}
+
+    # A stale definition that shadows a built-in service cannot be deleted --
+    # firewalld answers BUILTIN_SERVICE -- so it is reset to the shipped
+    # definition instead.  main.yml does that with firewall-cmd, which the
+    # system role has no equivalent for.
+    - name: Drop custom services that are no longer defined
+      ansible.builtin.set_fact:
+        __fw_remove: >-
+          {{ __fw_remove + ([{'service': [item], 'state': 'absent', 'permanent': true}]
+                            if item not in __fw_builtin_services else []) }}
+        __fw_revert: "{{ __fw_revert + ([item] if item in __fw_builtin_services else []) }}"
+      loop: >-
+        {{ (firewall_config.custom_permanent.services | default({}) | list)
+           | difference(__fw_parts | selectattr('ports') | map(attribute='service') | list)
+           | difference(__fw_extra_services) | difference(__fw_keep) | sort }}

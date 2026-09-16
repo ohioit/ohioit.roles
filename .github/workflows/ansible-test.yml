@@ -43,8 +43,8 @@ on:
   # This ensures that even if there haven't been commits that we are still
   # testing against latest version of ansible-test for each ansible-core
   # version
-  schedule:
-    - cron: '0 6 * * *'
+  # schedule:
+  #   - cron: '0 6 * * *'
 
 concurrency:
   group: >-
@@ -54,11 +54,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
-###
-# Sanity tests (REQUIRED)
-#
-# https://docs.ansible.com/projects/ansible/latest/dev_guide/testing_sanity.html
+  ###
+  # Sanity tests (REQUIRED)
+  #
+  # https://docs.ansible.com/projects/ansible/latest/dev_guide/testing_sanity.html
 
   sanity:
     name: Sanity (Ⓐ${{ matrix.ansible }})
@@ -76,6 +75,7 @@ jobs:
           # Add new versions announced in
           # https://github.com/ansible-collections/news-for-maintainers in a timely manner,
           # consider dropping testing against EOL versions and versions you don't support.
+          - stable-2.16
           - stable-2.18
           - stable-2.19
           - stable-2.20
@@ -92,7 +92,7 @@ jobs:
       - name: Perform sanity testing
         # See the documentation for the following GitHub action on
         # https://github.com/ansible-community/ansible-test-gh-action/blob/main/README.md
-        uses: ansible-community/ansible-test-gh-action@release/v1
+        uses: ansible-community/ansible-test-gh-action@6ded727edb598e670ac056a8e680ca4050bac0a3 # v1.18.0
         with:
           ansible-core-version: ${{ matrix.ansible }}
           testing-type: sanity
@@ -110,10 +110,10 @@ jobs:
           # https://github.com/ansible-community/ansible-test-gh-action#pull-request-change-detection
           pull-request-change-detection: false
 
-###
-# Unit tests (OPTIONAL)
-#
-# https://docs.ansible.com/projects/ansible/latest/dev_guide/testing_units.html
+  ###
+  # Unit tests (OPTIONAL)
+  #
+  # https://docs.ansible.com/projects/ansible/latest/dev_guide/testing_units.html
 
   units:
     runs-on: ubuntu-latest
@@ -127,6 +127,7 @@ jobs:
           # Add new versions announced in
           # https://github.com/ansible-collections/news-for-maintainers in a timely manner,
           # consider dropping testing against EOL versions and versions you don't support.
+          - stable-2.16
           - stable-2.18
           - stable-2.19
           - stable-2.20
@@ -140,7 +141,7 @@ jobs:
           Ansible version ${{ matrix.ansible }}
         # See the documentation for the following GitHub action on
         # https://github.com/ansible-community/ansible-test-gh-action/blob/main/README.md
-        uses: ansible-community/ansible-test-gh-action@release/v1
+        uses: ansible-community/ansible-test-gh-action@6ded727edb598e670ac056a8e680ca4050bac0a3 # v1.18.0
         with:
           ansible-core-version: ${{ matrix.ansible }}
           testing-type: units
@@ -158,15 +159,14 @@ jobs:
           # https://github.com/ansible-community/ansible-test-gh-action#pull-request-change-detection
           pull-request-change-detection: false
 
-###
-# Integration tests (RECOMMENDED)
-#
-# https://docs.ansible.com/projects/ansible/latest/dev_guide/testing_integration.html
+  ###
+  # Integration tests (RECOMMENDED)
+  #
+  # https://docs.ansible.com/projects/ansible/latest/dev_guide/testing_integration.html
 
-
-# If the application you are testing is available as a docker container and you want to test
-# multiple versions see the following for an example:
-# https://github.com/ansible-collections/community.zabbix/tree/master/.github/workflows
+  # If the application you are testing is available as a docker container and you want to test
+  # multiple versions see the following for an example:
+  # https://github.com/ansible-collections/community.zabbix/tree/master/.github/workflows
 
   integration:
     runs-on: ubuntu-latest
@@ -179,69 +179,86 @@ jobs:
           - devel
         # - milestone
         python:
-          - '3.9'
-          - '3.10'
-          - '3.11'
-          - '3.12'
-          - '3.13'
-          - '3.14'
+          - "3.6"
+          - "3.7"
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
         include:
           # Add new versions announced in
           # https://github.com/ansible-collections/news-for-maintainers in a timely manner,
           # consider dropping testing against EOL versions and versions you don't support.
+          # ansible-core 2.16
+          - ansible: stable-2.16
+            python: "3.6"
+          - ansible: stable-2.16
+            python: "3.7"
+          - ansible: stable-2.16
+            python: "3.8"
+          - ansible: stable-2.16
+            python: "3.9"
+          - ansible: stable-2.16
+            python: "3.10"
+          - ansible: stable-2.16
+            python: "3.11"
+          - ansible: stable-2.16
+            python: "3.12"
           # ansible-core 2.18
           - ansible: stable-2.18
-            python: '3.8'
+            python: "3.8"
           - ansible: stable-2.18
-            python: '3.9'
+            python: "3.9"
           - ansible: stable-2.18
-            python: '3.10'
+            python: "3.10"
           - ansible: stable-2.18
-            python: '3.11'
+            python: "3.11"
           - ansible: stable-2.18
-            python: '3.12'
+            python: "3.12"
           - ansible: stable-2.18
-            python: '3.13'
+            python: "3.13"
           # ansible-core 2.19
           - ansible: stable-2.19
-            python: '3.8'
+            python: "3.8"
           - ansible: stable-2.19
-            python: '3.9'
+            python: "3.9"
           - ansible: stable-2.19
-            python: '3.10'
+            python: "3.10"
           - ansible: stable-2.19
-            python: '3.11'
+            python: "3.11"
           - ansible: stable-2.19
-            python: '3.12'
+            python: "3.12"
           - ansible: stable-2.19
-            python: '3.13'
+            python: "3.13"
           # ansible-core 2.20
           - ansible: stable-2.20
-            python: '3.9'
+            python: "3.9"
           - ansible: stable-2.20
-            python: '3.10'
+            python: "3.10"
           - ansible: stable-2.20
-            python: '3.11'
+            python: "3.11"
           - ansible: stable-2.20
-            python: '3.12'
+            python: "3.12"
           - ansible: stable-2.20
-            python: '3.13'
+            python: "3.13"
           - ansible: stable-2.20
-            python: '3.14'
+            python: "3.14"
           # ansible-core 2.21
           - ansible: stable-2.21
-            python: '3.9'
+            python: "3.9"
           - ansible: stable-2.21
-            python: '3.10'
+            python: "3.10"
           - ansible: stable-2.21
-            python: '3.11'
+            python: "3.11"
           - ansible: stable-2.21
-            python: '3.12'
+            python: "3.12"
           - ansible: stable-2.21
-            python: '3.13'
+            python: "3.13"
           - ansible: stable-2.21
-            python: '3.14'
-
+            python: "3.14"
 
     steps:
       - name: >-
@@ -250,7 +267,7 @@ jobs:
           under Python ${{ matrix.python }}
         # See the documentation for the following GitHub action on
         # https://github.com/ansible-community/ansible-test-gh-action/blob/main/README.md
-        uses: ansible-community/ansible-test-gh-action@release/v1
+        uses: ansible-community/ansible-test-gh-action@6ded727edb598e670ac056a8e680ca4050bac0a3 # v1.18.0
         with:
           ansible-core-version: ${{ matrix.ansible }}
           # OPTIONAL command to run before invoking `ansible-test integration`
@@ -269,10 +286,9 @@ jobs:
           # https://github.com/ansible-community/ansible-test-gh-action#pull-request-change-detection
           pull-request-change-detection: false
 
-
-  check:  # This job does nothing and is only used for the branch protection
-          # or multi-stage CI jobs, like making sure that all tests pass before
-          # a publishing job is started.
+  check: # This job does nothing and is only used for the branch protection
+    # or multi-stage CI jobs, like making sure that all tests pass before
+    # a publishing job is started.
     if: always()
 
     needs:
@@ -284,6 +300,6 @@ jobs:
 
     steps:
       - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}

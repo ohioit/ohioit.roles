@@ -1,0 +1,74 @@
+---
+# Folds the common, group and host layers into the variables the rest of the
+# role reads.  Each variable is resolved lowest priority first, so the plain
+# `firewall_rules` form still works and acts as the base layer beneath them:
+#
+#   firewall_* -> common_firewall_* -> group_firewall_* -> host_firewall_*
+#
+# `firewall_rules` merges by rule name; everything else is a list and is either
+# appended to or, for `firewall_keep`, treated as a set.
+
+- name: Check that every rule in every layer has a name to key on
+  ansible.builtin.assert:
+    that: item.name | default('') | string | length > 0
+    fail_msg: >-
+      every firewall_rules entry needs a `name`, it is what the layers merge on
+      and what the service and ipset names are derived from: {{ item }}
+    quiet: true
+  loop: >-
+    {{ firewall_rules + common_firewall_rules
+       + group_firewall_rules + host_firewall_rules }}
+  loop_control:
+    label: "{{ item.name | default('(unnamed)') }}"
+
+- name: Start the merge from an empty set of rules
+  ansible.builtin.set_fact:
+    __fw_layered: {}
+
+- name: Merge the rule layers, lowest priority last to win
+  ansible.builtin.set_fact:
+    # keyed on the rule name, folded down to a list again below
+    __fw_layered: "{{ __fw_layered | combine(__fw_layer, recursive=true) }}"
+  loop:
+    - source: firewall_rules
+      rules: "{{ firewall_rules }}"
+    - source: common_firewall_rules
+      rules: "{{ common_firewall_rules }}"
+    - source: group_firewall_rules
+      rules: "{{ group_firewall_rules }}"
+    - source: host_firewall_rules
+      rules: "{{ host_firewall_rules }}"
+  loop_control:
+    label: "{{ item.source }} ({{ item.rules | length }})"
+  vars:
+    # "Traefik Web UI" and "traefik web ui" are the same rule
+    __fw_layer_keys: >-
+      {{ item.rules | map(attribute='name') | map('lower')
+         | map('regex_replace', '\s+', ' ') | map('trim') | list }}
+    __fw_layer: "{{ dict(__fw_layer_keys | zip(item.rules)) }}"
+
+- name: Resolve the layered variables
+  ansible.builtin.set_fact:
+    # a layer drops a rule an earlier one defined by repeating the name with
+    # `state: absent`
+    firewall_rules: >-
+      {{ __fw_layered | dict2items | rejectattr('key', 'in', __fw_absent)
+         | map(attribute='value') | list }}
+    # raw entries are applied in order, so the layers are simply appended
+    firewall_extra: >-
+      {{ firewall_extra + common_firewall_extra
+         + group_firewall_extra + host_firewall_extra }}
+    firewall: >-
+      {{ firewall + common_firewall + group_firewall + host_firewall }}
+    # a set of names: a layer adds by naming, and removes with a leading "-"
+    firewall_keep: >-
+      {{ __fw_keep_all | reject('match', '^-') | unique
+         | difference(__fw_keep_all | select('match', '^-')
+                      | map('regex_replace', '^-', '') | list) | sort }}
+  vars:
+    __fw_absent: >-
+      {{ __fw_layered | dict2items | selectattr('value.state', 'defined')
+         | selectattr('value.state', 'eq', 'absent') | map(attribute='key') | list }}
+    __fw_keep_all: >-
+      {{ firewall_keep + common_firewall_keep
+         + group_firewall_keep + host_firewall_keep }}

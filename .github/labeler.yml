@@ -1,0 +1,28 @@
+---
+actions:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/*.yml"
+
+devcontainer:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".devcontainer/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.md"
+          - docs/*.md
+          - playbooks/*.md
+
+roles:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.yml"
+          - roles/**
+
+firewall:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "firewall/**"
