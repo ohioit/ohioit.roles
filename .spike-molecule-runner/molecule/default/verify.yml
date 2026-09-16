@@ -1,0 +1,33 @@
+---
+# Guard: an unmatched host pattern skips every play and reports success.
+- name: Target host is in the inventory
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - ansible.builtin.assert:
+        that: ("el" ~ lookup('env', 'SPIKE_EL')) in groups['all']
+
+- name: Verify
+  hosts: "el{{ lookup('env', 'SPIKE_EL') }}"
+  gather_facts: false
+  tasks:
+    - name: Firewalld is running
+      ansible.builtin.command: firewall-cmd --state
+      changed_when: false
+
+    - name: Read ipsets and rich rules from the running daemon
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - firewall-cmd --get-ipsets
+        - firewall-cmd --zone=public --list-rich-rules
+        - firewall-cmd --zone=public --list-services
+      register: __fw
+      changed_when: false
+
+    - name: Generated objects exist at runtime
+      ansible.builtin.assert:
+        that:
+          - "'spike-web-ip' in __fw.results[0].stdout"
+          - "'spike-web-net' in __fw.results[0].stdout"
+          - "'source ipset=\"spike-web-ip\" service name=\"spike-web\" accept' in __fw.results[1].stdout"
+          - "'source ipset=\"spike-web-net\" service name=\"spike-web\" accept' in __fw.results[1].stdout"

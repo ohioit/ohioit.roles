@@ -1,0 +1,51 @@
+---
+# Guard: an unmatched host pattern skips every play and reports success.
+- name: Target host is in the inventory
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - ansible.builtin.assert:
+        that: ("el" ~ lookup('env', 'SPIKE_EL')) in groups['all']
+
+- name: Create
+  hosts: "el{{ lookup('env', 'SPIKE_EL') }}"
+  gather_facts: false
+  tasks:
+    - name: Start systemd container with Docker (privileged, host cgroupns)
+      when: spike_engine == 'docker-privileged'
+      community.docker.docker_container:
+        name: "{{ inventory_hostname }}"
+        image: "{{ container_image }}"
+        command: /sbin/init
+        privileged: true
+        cgroupns_mode: host
+        volumes: [/sys/fs/cgroup:/sys/fs/cgroup:rw]
+        state: started
+      delegate_to: localhost
+
+    - name: Start systemd container with podman
+      when: spike_engine.startswith('podman')
+      containers.podman.podman_container:
+        executable: "{{ ansible_podman_executable }}"
+        name: "{{ inventory_hostname }}"
+        image: "{{ container_image }}"
+        command: /sbin/init
+        systemd: always
+        privileged: "{{ spike_engine == 'podman-rootless-privileged' }}"
+        cap_add: [NET_ADMIN, NET_RAW]
+        state: started
+      delegate_to: localhost
+
+    - name: Wait for the connection
+      ansible.builtin.wait_for_connection:
+        timeout: 120
+
+    - name: Wait for systemd to finish booting
+      ansible.builtin.command: systemctl is-system-running --wait
+      register: __boot
+      changed_when: false
+      failed_when: __boot.stdout not in ['running', 'degraded']
+
+    - name: Show boot state
+      ansible.builtin.debug:
+        var: __boot.stdout

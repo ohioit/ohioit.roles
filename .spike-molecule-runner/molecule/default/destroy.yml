@@ -1,0 +1,20 @@
+---
+- name: Destroy
+  hosts: "el{{ lookup('env', 'SPIKE_EL') }}"
+  gather_facts: false
+  tasks:
+    - name: Remove Docker container
+      when: spike_engine.startswith('docker')
+      community.docker.docker_container:
+        name: "{{ inventory_hostname }}"
+        state: absent
+        force_kill: true
+      delegate_to: localhost
+
+    - name: Remove podman container
+      when: spike_engine.startswith('podman')
+      containers.podman.podman_container:
+        executable: "{{ ansible_podman_executable }}"
+        name: "{{ inventory_hostname }}"
+        state: absent
+      delegate_to: localhost

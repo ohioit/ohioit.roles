@@ -1,0 +1,85 @@
+---
+# PROTOTYPE (throwaway): wayfinder ticket 11, "Confirm the Molecule container
+# runtime on a real GitHub runner". Lives only on the spike/molecule-runner
+# branch; never merge.
+name: SPIKE molecule runtime on runner
+
+on:
+  push:
+    branches: [spike/molecule-runner]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  molecule:
+    name: ${{ matrix.engine }} / el${{ matrix.el }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker-privileged, podman-rootless-caps, podman-rootless-privileged, podman-rootful-caps]
+        el: ["8", "9", "10"]
+    env:
+      SPIKE_ENGINE: ${{ matrix.engine }}
+      SPIKE_EL: ${{ matrix.el }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Runner facts
+        run: |
+          cat /etc/os-release | head -2; uname -r
+          docker version --format '{{.Server.Version}}' || true
+          podman version || true
+          stat -fc %T /sys/fs/cgroup
+          echo "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset}"
+          systemctl --user is-system-running 2>&1 || true
+          podman info --format '{{.Host.CgroupManager}} {{.Host.CgroupsVersion}} rootless={{.Host.Security.Rootless}}' || true
+
+      - name: Install controller (ansible-core 2.16, Molecule 26.8.0)
+        run: |
+          python -m pip install 'ansible-core~=2.16.0' 'molecule==26.8.0' requests
+          which ansible-playbook molecule
+          ansible-playbook --version
+          ansible-galaxy collection install \
+            'fedora.linux_system_roles:==2.4.2' \
+            'ansible.posix:>=2.1.0,<2.2.0' \
+            'containers.podman:==1.20.2' \
+            'community.docker:>=4.0.0,<5.0.0'
+
+      - name: Rootful podman wrapper
+        if: matrix.engine == 'podman-rootful-caps'
+        run: |
+          printf '#!/bin/sh\nexec sudo podman "$@"\n' | sudo tee /usr/local/bin/sudo-podman
+          sudo chmod +x /usr/local/bin/sudo-podman
+          sudo-podman info --format '{{.Host.CgroupManager}} rootless={{.Host.Security.Rootless}}'
+
+      - name: Pre-pull image (timed separately)
+        run: |
+          img=docker.io/almalinux/${SPIKE_EL}-init
+          case "$SPIKE_ENGINE" in
+            docker-*) time docker pull "$img" ;;
+            podman-rootful-*) time sudo podman pull "$img" ;;
+            *) time podman pull "$img" ;;
+          esac
+
+      - name: molecule test
+        working-directory: .spike-molecule-runner
+        env:
+          ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+          ANSIBLE_FORCE_COLOR: "1"
+        run: time molecule test
+
+      - name: Container diagnostics on failure
+        if: failure()
+        run: |
+          for e in docker podman "sudo podman"; do
+            echo "== $e"; $e ps -a || true
+            $e logs --tail 100 "el${SPIKE_EL}" 2>&1 || true
+          done

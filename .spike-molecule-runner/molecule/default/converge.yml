@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: "el{{ lookup('env', 'SPIKE_EL') }}"
+  tasks:
+    - name: Apply the firewall role
+      ansible.builtin.include_role:
+        name: firewall

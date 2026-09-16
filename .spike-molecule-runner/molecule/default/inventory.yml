@@ -1,0 +1,23 @@
+---
+all:
+  children:
+    molecule:
+      hosts:
+        el8:
+          ansible_python_interpreter: /usr/libexec/platform-python
+        el9: {}
+        el10: {}
+      vars:
+        spike_engine: "{{ lookup('env', 'SPIKE_ENGINE') }}"
+        container_image: "docker.io/almalinux/{{ inventory_hostname | replace('el', '') }}-init"
+        ansible_connection: >-
+          {{ 'community.docker.docker' if spike_engine.startswith('docker')
+             else 'containers.podman.podman' }}
+        ansible_podman_executable: >-
+          {{ 'sudo-podman' if spike_engine == 'podman-rootful-caps' else 'podman' }}
+        firewall_rules:
+          - name: Spike Plain
+            port: 9090
+          - name: Spike Web
+            port: [8080]
+            sourceip: [192.0.2.10, 198.51.100.0/24]
