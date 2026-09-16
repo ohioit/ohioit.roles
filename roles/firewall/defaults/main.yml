@@ -1,0 +1,63 @@
+---
+# Fall back to plain fedora.linux_system_roles.firewall behaviour.  When true
+# the `firewall` list below is handed to that role untouched and nothing is
+# generated, queried or pruned.
+firewall_advanced: false
+
+# Raw fedora.linux_system_roles.firewall entries, used by advanced mode only.
+firewall: []
+
+# The simple syntax.  Each entry becomes a custom service, an ipset per kind of
+# source address, and a rich rule joining the two.  See README.md.
+firewall_rules: []
+
+# Zone the generated objects are placed in.  Overridable per rule.
+firewall_zone: public
+
+# Remove custom services, ipsets, rich rules and zone services that are present
+# on the host but not defined in `firewall_rules` or `firewall_extra`.
+firewall_prune: true
+
+# Raw fedora.linux_system_roles.firewall entries for the things the simple
+# syntax cannot express.  Applied after the generated ones, never pruned.
+firewall_extra: []
+
+# Names pruning must never remove, whether they are a zone service, a custom
+# service or an ipset.  A name that `firewall_rules` also mentions is dropped
+# from this list, so declaring `ssh` with a `sourceip` still moves it out of the
+# zone and into a rich rule -- the list only protects what the rules are silent
+# about.  A fresh CentOS 10 host has ssh and cockpit in /etc/firewalld, so
+# without this the first run of an unrelated ruleset closes the door behind it.
+firewall_keep:
+  - ssh
+
+# Fail rather than prune when neither `firewall_rules` nor `firewall_keep`
+# accounts for ssh.  Only checks that something keeps ssh reachable; it cannot
+# tell whether a `sourceip` covers the host Ansible is connecting from.
+firewall_require_ssh: true
+
+# The common/group/host layers.  tasks/layers.yml folds these into the four
+# variables above, lowest priority first:
+#
+#   firewall_rules   <- common_firewall_rules  <- group_firewall_rules  <- host_firewall_rules
+#   firewall_extra   <- common_firewall_extra  <- group_firewall_extra  <- host_firewall_extra
+#   firewall_keep    <- common_firewall_keep   <- group_firewall_keep   <- host_firewall_keep
+#   firewall         <- common_firewall        <- group_firewall        <- host_firewall
+#
+# Rules are merged by `name`, key by key, so a layer can change one field of a
+# rule an earlier layer defined.  See README.md.
+common_firewall_rules: []
+group_firewall_rules: []
+host_firewall_rules: []
+
+common_firewall_extra: []
+group_firewall_extra: []
+host_firewall_extra: []
+
+common_firewall_keep: []
+group_firewall_keep: []
+host_firewall_keep: []
+
+common_firewall: []
+group_firewall: []
+host_firewall: []

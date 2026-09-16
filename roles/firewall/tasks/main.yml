@@ -1,0 +1,92 @@
+---
+- name: Combine the common, group and host layers
+  ansible.builtin.include_tasks: layers.yml
+
+- name: Apply the firewall configuration verbatim
+  ansible.builtin.include_role:
+    name: fedora.linux_system_roles.firewall
+  when: firewall_advanced | bool
+
+- name: Generate the firewall configuration from the simple syntax
+  when: not (firewall_advanced | bool)
+  block:
+    # `firewall` is what this role hands the system role, so it has to be free
+    # for that.  An extra variable (-e) would even outrank the value passed
+    # below and silently replace the generated configuration.
+    - name: Check that `firewall` is not competing with the generated configuration
+      ansible.builtin.assert:
+        that: firewall | length == 0
+        fail_msg: >-
+          `firewall` is set but `firewall_advanced` is false.  Set
+          firewall_advanced to true to apply it verbatim, or move the entries
+          to `firewall_extra` to apply them alongside firewall_rules.  The
+          common_firewall, group_firewall and host_firewall layers feed
+          `firewall` too, so check those as well.
+        quiet: true
+
+    - name: Install firewalld and read back its current configuration
+      ansible.builtin.include_role:
+        name: fedora.linux_system_roles.firewall
+      vars:
+        # Called with no configuration the role only installs and starts
+        # firewalld, then sets the `firewall_config` fact we diff against.
+        firewall: []
+
+    - name: Work out what should be added and what should be removed
+      ansible.builtin.include_tasks: build.yml
+
+    - name: Show the entries that are not defined and will be removed
+      ansible.builtin.debug:
+        msg: >-
+          {{ __fw_remove + __fw_rich_stale
+             + (__fw_revert | map('regex_replace', '^', 'reset to built-in: ') | list) }}
+      when: (__fw_remove + __fw_rich_stale + __fw_revert) | length > 0
+
+    # Rich rules first, so nothing is still pointing at an ipset or a service
+    # that the next task removes.  They are not handled by the system role
+    # because its rich rule comparison does not see the current configuration.
+    - name: Remove the rich rules that are no longer defined
+      ansible.posix.firewalld:
+        zone: "{{ item.zone }}"
+        rich_rule: "{{ item.rule }}"
+        state: disabled
+        permanent: true
+        immediate: true
+      loop: "{{ __fw_rich_stale }}"
+      loop_control:
+        label: "{{ item.rule }}"
+
+    # firewalld refuses `--delete-service` for a name it also ships, so a
+    # definition in /etc/firewalld that shadows one of those is reset rather
+    # than removed.  The system role has no operation for this, and the reload
+    # is what carries the restored definition into the runtime configuration.
+    - name: Reset the services that shadow a built-in definition
+      when: __fw_revert | length > 0
+      block:
+        - name: Restore the shipped definition
+          ansible.builtin.command:
+            argv: [firewall-cmd, --permanent, "--load-service-defaults={{ item }}"]
+          changed_when: true
+          loop: "{{ __fw_revert }}"
+
+        - name: Reload firewalld so the restored definitions take effect
+          ansible.builtin.command:
+            argv: [firewall-cmd, --reload]
+          changed_when: true
+
+    - name: Apply the services, ipsets and zone services
+      ansible.builtin.include_role:
+        name: fedora.linux_system_roles.firewall
+      vars:
+        firewall: "{{ __fw_remove + __fw_add + __fw_extra }}"
+
+    - name: Apply the rich rules
+      ansible.posix.firewalld:
+        zone: "{{ item.zone }}"
+        rich_rule: "{{ item.rule }}"
+        state: enabled
+        permanent: true
+        immediate: true
+      loop: "{{ __fw_rich }}"
+      loop_control:
+        label: "{{ item.rule }}"

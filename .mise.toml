@@ -1,0 +1,9 @@
+[env]
+PROJECT_NAME = "{{ config_root | basename }}"
+
+[settings]
+python.uv_venv_auto = "create|source"
+
+[tools]
+"python" = "3.14"
+"uv" = "0.12.15"
