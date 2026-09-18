@@ -79,3 +79,9 @@ target/
 var/
 venv/
 wheels/
+# temp
+.scratch/
+/docs/adr/
+/docs/agents/
+AGENTS.md
+CONTEXT.md
