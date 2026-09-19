@@ -9,9 +9,9 @@ keep_fragments: false
 mention_ancestor: true
 new_plugins_after_name: removed_features
 notesdir: fragments
+# Markdown only. The .rst output was dropped so there is exactly one
+# changelog and no question about which file is authoritative.
 output:
-- file: CHANGELOG.rst
-  format: rst
 - file: CHANGELOG.md
   format: md
 prelude_section_name: release_summary
@@ -34,7 +34,7 @@ sections:
   - Bugfixes
 - - known_issues
   - Known Issues
-title: CHANGE THIS IN changelogs/config.yaml!
+title: Ohio University IT Roles Collection
 trivial_section_name: trivial
 use_fqcn: true
 vcs: auto

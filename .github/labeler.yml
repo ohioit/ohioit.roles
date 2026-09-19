@@ -13,16 +13,18 @@ documentation:
   - changed-files:
       - any-glob-to-any-file:
           - "*.md"
-          - docs/*.md
-          - playbooks/*.md
+          - docs/**
 
+# Was `*.yml`, which matched root galaxy.yml and codecov.yml and labelled
+# unrelated pull requests as role changes.
 roles:
   - changed-files:
       - any-glob-to-any-file:
-          - "*.yml"
           - roles/**
 
+# Was `firewall/**`, which matched nothing: the role lives under roles/.
 firewall:
   - changed-files:
       - any-glob-to-any-file:
-          - "firewall/**"
+          - roles/firewall/**
+          - extensions/molecule/firewall/**
