@@ -3,7 +3,7 @@
 
 namespace: ohioit
 name: roles
-version: 0.0.0
+version: 0.0.0 # x-release-please-version
 readme: README.md
 authors:
   - Kyle Barstow <barstown@ohio.edu> (https://github.com/barstown)
@@ -14,16 +14,73 @@ tags:
   - roles
   - sysops
   - windows
-# dependencies: {}
+
+# Shipped Dependencies: every collection our roles need, installed for anyone
+# who installs ohioit.roles. Ranges are maintained by hand -- Renovate's
+# ansible-galaxy manager is disabled in .renovaterc.json5 on purpose.
+#
+# ansible.posix is declared directly even though fedora.linux_system_roles
+# already requires it: roles/firewall calls ansible.posix.firewalld itself, and
+# a role should not rely on another collection's dependency list for a module
+# it calls by name.
+dependencies:
+  fedora.linux_system_roles: "2.4.2"
+  ansible.posix: ">=2.1.0,<2.2.0"
+
 repository: https://github.com/ohioit/ohioit.roles
-# documentation: https://github.com/ansible-collection-migration/community.REPO_NAME/tree/main/docs
 homepage: https://github.com/ohioit/ohioit.roles
 issues: https://github.com/ohioit/ohioit.roles/issues
+
 build_ignore:
   # https://docs.ansible.com/projects/ansible/devel/dev_guide/developing_collections_distributing.html#ignoring-files-and-folders
+  #
+  # What a user installing from Galaxy should get: roles/, meta/, docs/docsite/,
+  # README, LICENSE and the changelog. Everything else here is how the
+  # collection is built and tested, and none of it belongs in their tarball.
+  #
+  # Check this with `ansible-galaxy collection build` and `tar tzf`: a directory
+  # left off this list is shipped silently, and local artifacts like .ansible/
+  # (written by `ansible-galaxy collection install`) are easy to miss because
+  # git ignores them and the build does not.
+
+  # Editor, container and repo configuration
   - .devcontainer
   - .editorconfig
   - .github
   - .gitignore
+  - .markdownlint.jsonc
+  - .mise.toml
+  - .prettierrc.json5
+  - .renovaterc.json5
   - .vscode
+  - .yamllint.yml
+  - .ansible-lint
+  - .ansible-lint-ignore
+
+  # Build, test and release tooling
+  - .release-please-manifest.json
+  - release-please-config.json
+  - codecov.yml
+  - extensions
+  - lanes
+  - pyproject.toml
+  - tests
+  - tools
+  - uv.lock
+
+  # Local artifacts. Not in git, but the build walks the working tree.
+  - .ansible
+  - .pytest_cache
+  - .ruff_cache
+  - .venv
+  - .scratch
+
+  # Documentation for contributors and agents rather than for users
+  - AGENTS.md
+  - CONTEXT.md
+  - REVIEW_CHECKLIST.md
+  - docs/adr
+  - docs/agents
+  - docs/github-repo-settings.md
+  - docs/role-readme-skeleton.md
   - changelogs/.plugin-cache.yaml

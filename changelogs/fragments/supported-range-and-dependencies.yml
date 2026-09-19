@@ -1,0 +1,15 @@
+---
+minor_changes:
+  - >-
+    The collection now declares ``requires_ansible: '>=2.16.0'``, so
+    ``ansible-galaxy`` refuses an install that could not work rather than
+    letting it fail at run time. 2.16 is the floor because it is the only
+    ansible-core that manages a stock RHEL 8 host.
+  - >-
+    The collection now declares its dependencies
+    (``fedora.linux_system_roles``, ``ansible.posix``), so installing
+    ``ohioit.roles`` brings everything its roles call.
+  - >-
+    firewall - the role now declares the platforms it supports (RHEL 8, 9
+    and 10) along with its real author, licence and tags, replacing the
+    ``ansible-galaxy init`` placeholders.
