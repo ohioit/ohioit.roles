@@ -25,7 +25,7 @@ tags:
 # it calls by name.
 dependencies:
   fedora.linux_system_roles: "2.4.2"
-  ansible.posix: ">=2.1.0,<2.2.0"
+  ansible.posix: ">=2.2.2,<2.3.0"
 
 repository: https://github.com/ohioit/ohioit.roles
 homepage: https://github.com/ohioit/ohioit.roles
