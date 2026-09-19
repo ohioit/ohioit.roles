@@ -1,0 +1,131 @@
+---
+# Cuts releases from main.
+#
+# Two tools on purpose:
+# release-please decides the version from squash-merged Conventional Commit
+# titles, and antsibull-changelog writes the changelog from the fragments
+# contributors wrote by hand. release-please's own changelog is turned off, so
+# there is exactly one.
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    name: Release PR
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      pr_branch: ${{ steps.release.outputs.pr && fromJSON(steps.release.outputs.pr).headBranchName || '' }}
+    steps:
+      # A GitHub App token rather than GITHUB_TOKEN: pushes made with
+      # GITHUB_TOKEN do not start workflows, so the Release PR would sit there
+      # with no checks and could never satisfy the Required Checks on main.
+      # Creating the App is a human-only step -- see docs/github-repo-settings.md.
+      - name: Get an App token
+        id: token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        id: release
+        with:
+          token: ${{ steps.token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Builds the changelog onto the Release PR so it is reviewed before merge,
+  # rather than discovered afterwards on the Release page.
+  changelog:
+    name: Build the changelog on the Release PR
+    needs: release-please
+    if: needs.release-please.outputs.pr_branch != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get an App token
+        id: token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          token: ${{ steps.token.outputs.token }}
+          ref: ${{ needs.release-please.outputs.pr_branch }}
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+
+      - name: Collect the fragments into the changelog
+        run: |
+          version=$(uv run python -c "import yaml; print(yaml.safe_load(open('galaxy.yml'))['version'])")
+          uv run antsibull-changelog release --version "$version"
+
+      - name: Commit the changelog
+        run: |
+          if git diff --quiet; then
+            echo "Changelog already current."
+            exit 0
+          fi
+          git config user.name "ohioit-roles[bot]"
+          git config user.email "ohioit-roles[bot]@users.noreply.github.com"
+          git add CHANGELOG.md changelogs/
+          git commit -m "chore: build the changelog for this release"
+          git push
+
+  # Runs only on the push that merges the Release PR, when release-please has
+  # created the tag and the GitHub Release.
+  artifact:
+    name: Attach the collection tarball
+    needs: release-please
+    if: needs.release-please.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+      - name: Build the collection
+        run: uv run ansible-galaxy collection build --output-path dist --force
+      - name: Attach it to the release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag }}
+          files: dist/*.tar.gz
+
+  # Publishing is off. The workflow exists and is wired, but this job is gated
+  # on a repository variable that is deliberately unset: the ohioit namespace
+  # still needs a dedicated Galaxy service account and its API key. Until then,
+  # publishing is started by hand from publish-galaxy.yml.
+  publish:
+    name: Publish to Galaxy
+    needs:
+      - release-please
+      - artifact
+    if: needs.release-please.outputs.released == 'true' && vars.GALAXY_PUBLISH_ENABLED == 'true'
+    uses: ./.github/workflows/publish-galaxy.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag }}
+    secrets: inherit

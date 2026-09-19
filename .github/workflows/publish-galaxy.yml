@@ -1,0 +1,67 @@
+---
+# Publishes a release to public Ansible Galaxy under the ohioit namespace.
+#
+# Publishing is a separate step from cutting the release, and today it only ever
+# runs because a human started it. The `workflow_call` entry point exists so
+# that turning on automatic publishing later is setting a repository variable
+# (GALAXY_PUBLISH_ENABLED) rather than rewriting the release pipeline.
+#
+# Before this can work, two human-only steps:
+#   1. a dedicated Galaxy service account owning the ohioit namespace;
+#   2. its API key stored as ANSIBLE_GALAXY_API_KEY in the `galaxy` environment,
+#      which is restricted to tags.
+# See docs/github-repo-settings.md.
+name: Publish to Galaxy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to publish, e.g. 0.1.0
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    # The API key lives here rather than in repository secrets, so it is not
+    # readable from an arbitrary branch. Add a required reviewer when publishing
+    # becomes automatic.
+    environment: galaxy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+
+      # Downloaded from the release rather than rebuilt, so what reaches Galaxy
+      # is the artifact that was reviewed and attached.
+      - name: Fetch the release tarball
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          gh release download "${{ inputs.tag }}" --pattern '*.tar.gz' --dir dist
+
+      - name: Publish
+        env:
+          ANSIBLE_GALAXY_API_KEY: ${{ secrets.ANSIBLE_GALAXY_API_KEY }}
+        run: |
+          uv run ansible-galaxy collection publish dist/*.tar.gz \
+            --api-key "$ANSIBLE_GALAXY_API_KEY"
