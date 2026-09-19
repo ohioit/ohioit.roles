@@ -1,11 +1,32 @@
 [project]
-name = "template-ansible"
-version = "0.1.0"
+# The `current` Core Lane, and every dev tool the repo uses.
+#
+# This project's version has nothing to do with the collection's version, which
+# lives in galaxy.yml and is set by release-please.
+#
+# The second Core Lane is a separate, separately locked project at
+# lanes/core-2.16/, because ansible-core 2.16 stops at Python 3.12 and no single
+# controller Python spans both lanes.
+name = "ohioit-roles-dev"
+version = "0.0.0"
 requires-python = ">=3.14,<3.15"
 dependencies = [
-    "aar-doc==2.3.0",
+    # Core Lane: `current`. Unpinned by policy -- a Renovate minor bump moves
+    # the whole lane, sanity tests included, and is merged by hand when green.
     "ansible-core==2.21.4",
+    # Role testing. Molecule drives the scenarios in extensions/molecule/.
+    "molecule==26.8.0",
+    # Lint and docs. These run in the current lane only.
+    "aar-doc==2.3.0",
     "ansible-lint==26.8.0",
+    "antsibull-changelog==0.35.1",
     "antsibull-docs==2.27.0",
-    "pywinrm==0.5.0", # Only needed if you need to manage Windows servers
+    "yamllint==1.38.0",
+    # Tests for the repo's own tooling (tools/, exercised at its CLI boundary).
+    "pytest==9.1.1",
+    # Only needed to manage Windows servers, which no role does yet.
+    "pywinrm==0.5.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/tooling"]

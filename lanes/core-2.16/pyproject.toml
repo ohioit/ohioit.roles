@@ -1,0 +1,26 @@
+[project]
+# Core Lane: 2.16. The oldest ansible-core we support, and the only one that
+# manages a stock RHEL 8 host (Python 3.6 on the managed node).
+#
+# This is a separate uv project rather than an extra group in the root one
+# because 2.16 tops out at controller Python 3.12 while the root project is
+# 3.14: the two cannot share a lock file. uv downloads the 3.12 interpreter;
+# .mise.toml and the devcontainer stay 3.14-only.
+#
+# It holds only what a Molecule run needs. No ansible-lint, no docs tooling:
+# lint and docs run in the current lane only.
+#
+# Delete this whole directory, and its row in tools/molecule_plan.py's LANES
+# table, when RHEL 8 retires (2029-05-31).
+name = "ohioit-roles-core-2-16"
+version = "0.0.0"
+requires-python = "==3.12.*"
+dependencies = [
+    # Held below 2.17 by a Renovate rule in .renovaterc.json5. The floor is
+    # 2.16.19 because that is what ansible-lint requires of a 2.16 controller.
+    "ansible-core>=2.16.19,<2.17",
+    # Molecule supports only the latest two Ansible versions. If a release drops
+    # 2.16, its Renovate PR fails here: close it, pin molecule to the last
+    # working version, and add an allowedVersions cap with a comment saying why.
+    "molecule==26.8.0",
+]
