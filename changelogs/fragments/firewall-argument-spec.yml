@@ -1,0 +1,6 @@
+---
+minor_changes:
+  - >-
+    firewall - the role's variables are now documented in its README, generated
+    from a new ``meta/argument_specs.yml``, so its interface is visible on
+    GitHub and Galaxy without reading ``defaults/main.yml``.
