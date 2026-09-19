@@ -1,0 +1,60 @@
+---
+# Asserts live firewalld state by asking firewalld, not by re-reading the
+# variables the role was given. Re-reading its own input would pass whether or
+# not anything reached the host.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Read back the custom service firewalld now has
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --info-service=demo]
+      changed_when: false
+      register: service
+
+    - name: Read back the ipset holding the rule's source addresses
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --info-ipset=demo-net]
+      changed_when: false
+      register: ipset
+
+    - name: Read back the zone's rich rules
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --zone=public, --list-rich-rules]
+      changed_when: false
+      register: rich
+
+    - name: Check that the rule produced the objects it should have
+      ansible.builtin.assert:
+        that:
+          # `port: 8080/tcp` becomes a custom service carrying that port.
+          - "'8080/tcp' in service.stdout"
+          # `sourceip` with a prefix length becomes a hash:net ipset.
+          - "'hash:net' in ipset.stdout"
+          - "'10.0.0.0/8' in ipset.stdout"
+          # The rich rule is what actually binds the two together; without it
+          # the service and the ipset exist and nothing is permitted.
+          - rich.stdout is search('source ipset="demo-net"')
+          - rich.stdout is search('service name="demo"')
+        fail_msg: |
+          The firewall role did not produce the expected firewalld objects.
+          service: {{ service.stdout }}
+          ipset:   {{ ipset.stdout }}
+          rich:    {{ rich.stdout }}
+        quiet: true
+
+    - name: Check that the rule did not also open the port to the whole zone
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --zone=public, --list-services]
+      changed_when: false
+      register: zone_services
+
+    - name: Check that a rule with a source address stays out of the zone
+      ansible.builtin.assert:
+        that: "'demo' not in zone_services.stdout.split()"
+        fail_msg: >-
+          demo is a zone service on public, so the port is open to everyone.
+          A rule naming a sourceip should reach the host only through its rich
+          rule.
+        quiet: true

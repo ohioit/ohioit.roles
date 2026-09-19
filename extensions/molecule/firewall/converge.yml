@@ -1,0 +1,22 @@
+---
+# Deliberately one small rule. This scenario exists to prove the pipeline end to
+# end on a real role -- container, systemd, firewalld, the collection installed
+# by its real name -- not to be the firewall role's test suite. Pruning, the
+# common/group/host layers and the ssh safety check are covered by the later
+# firewall effort.
+#
+# One rule with both a port and a source address is the smallest input that
+# still exercises all three kinds of object the role generates: a custom
+# service, an ipset, and the rich rule binding them together.
+
+- name: Converge
+  hosts: all
+  tasks:
+    - name: Apply a firewall rule written in the simple syntax
+      ansible.builtin.include_role:
+        name: ohioit.roles.firewall
+      vars:
+        firewall_rules:
+          - name: demo
+            port: 8080/tcp
+            sourceip: 10.0.0.0/8

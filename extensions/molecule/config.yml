@@ -1,0 +1,52 @@
+---
+# Shared Molecule configuration for every scenario in this collection.
+#
+# Molecule discovers this file automatically for collections
+# (`molecule --help` documents the `extensions/molecule/config.yml` lookup), and
+# deep-merges each scenario's own molecule.yml on top. A scenario should
+# therefore contain almost nothing: the plumbing lives here and is written once.
+
+driver:
+  # The built-in driver, with our own create.yml and destroy.yml calling
+  # containers.podman. No molecule-plugins.
+  name: default
+
+platforms:
+  # The real host definitions live in inventory.yml, which is passed through the
+  # executor args below. This single entry exists because Molecule requires a
+  # non-empty platforms list; nothing reads it.
+  - name: inventory
+
+provisioner:
+  name: ansible
+  playbooks:
+    create: ../create.yml
+    destroy: ../destroy.yml
+
+ansible:
+  executor:
+    args:
+      # Our own inventory, passed as an executor argument rather than through
+      # ANSIBLE_INVENTORY: an environment variable is picked up by anything the
+      # run shells out to, and is easy to have set and not notice.
+      #
+      # MOLECULE_PLATFORM selects the Target Platform. A --limit that matches no
+      # host makes every play report "skipping: no hosts matched" and exit 0 --
+      # a green run that tested nothing. create.yml refuses to run in that case.
+      ansible_playbook:
+        - --inventory
+        - ${MOLECULE_SCENARIO_DIRECTORY}/../inventory.yml
+        - --limit
+        - ${MOLECULE_PLATFORM:-el9}
+
+scenario:
+  # The full sequence, every time. Idempotence is not optional: a role that
+  # reports changed on a second run is a role that will fight another run of
+  # itself forever.
+  test_sequence:
+    - destroy
+    - create
+    - converge
+    - idempotence
+    - verify
+    - destroy

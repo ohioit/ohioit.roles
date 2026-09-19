@@ -1,0 +1,7 @@
+---
+# Everything else is inherited from extensions/molecule/config.yml, which
+# Molecule discovers and deep-merges underneath this file. A scenario should
+# stay this small: if something here would be useful to the next role, it
+# belongs in the shared config instead.
+scenario:
+  name: firewall
