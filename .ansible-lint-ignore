@@ -1,0 +1,17 @@
+# Scoped ignores, one line per file and rule. Everything not listed here is
+# enforced, and the rule stays on for every role added later.
+#
+# roles/firewall: var-naming[no-role-prefix] fires on two deliberate parts of
+# the role's public interface.
+#
+#   * `firewall` cannot be renamed. It is the variable
+#     fedora.linux_system_roles.firewall itself reads, and this role hands its
+#     generated configuration over in it.
+#   * `common_firewall_*`, `group_firewall_*` and `host_firewall_*` are the
+#     layering interface, and they are meant to be set in group_vars and
+#     host_vars rather than on the role. Prefixing them `firewall_` would make
+#     them look like role options, which is the opposite of what they are.
+#
+# Revisit with the firewall role cleanup effort.
+roles/firewall/defaults/main.yml var-naming[no-role-prefix]
+roles/firewall/tasks/layers.yml var-naming[no-role-prefix]

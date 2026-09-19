@@ -1,0 +1,41 @@
+---
+# yamllint's defaults are tuned for hand-written config files, and three of them
+# fight things this repo does on purpose.
+extends: default
+
+ignore: |
+  .venv/
+  lanes/*/.venv/
+  .ansible/
+  changelogs/changelog.yaml
+
+rules:
+  # 80 is too narrow for a workflow: an action pinned to a digest is 40
+  # characters of SHA before anything else on the line, and wrapping those makes
+  # them harder to check, not easier.
+  line-length:
+    max: 140
+    allow-non-breakable-words: true
+
+  # antsibull-changelog writes changelogs/config.yaml itself, with sequences at
+  # the parent's indentation. `consistent` accepts that without forcing us to
+  # reformat a generated file after every run.
+  indentation:
+    spaces: consistent
+    indent-sequences: consistent
+
+  # `uses: owner/action@<sha> # v7` is the conventional way to write a digest pin
+  # and keep the human-readable version next to it. Demanding two spaces there
+  # would mean reformatting every pin away from the form everyone recognises.
+  comments:
+    min-spaces-from-content: 1
+
+  # GitHub workflows key on `on:`, which YAML 1.1 reads as the boolean true.
+  # This is GitHub's schema, not a mistake in ours.
+  truthy:
+    allowed-values: ["true", "false", "on"]
+
+  # Ansible and GitHub both use long option lists where a trailing comment or a
+  # deliberate blank line aids reading.
+  empty-lines:
+    max: 2
