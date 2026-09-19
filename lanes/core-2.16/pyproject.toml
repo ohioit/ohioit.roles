@@ -14,7 +14,7 @@
 # table, when RHEL 8 retires (2029-05-31).
 name = "ohioit-roles-core-2-16"
 version = "0.0.0"
-requires-python = "==3.12.*"
+requires-python = "==3.14.*"
 dependencies = [
     # Held below 2.17 by a Renovate rule in .renovaterc.json5. The floor is
     # 2.16.19 because that is what ansible-lint requires of a 2.16 controller.
