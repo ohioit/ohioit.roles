@@ -1,0 +1,35 @@
+---
+# One host per Target Platform. The host names match the names the plan script
+# derives from each role's meta/main.yml galaxy_info.platforms (EL + 8 -> el8),
+# so adding a platform to a role and adding it here are the same vocabulary.
+#
+# Images ride floating major tags on purpose: the point is to notice when
+# upstream moves. Renovate's ansible-galaxy manager is off and there is no
+# Dockerfile here, so nothing digest-pins them behind our backs -- which is also
+# why they are not cached in CI.
+all:
+  children:
+    el:
+      vars:
+        # Rootless podman is the only engine, locally and in CI: one code
+        # path, and no test container gets root on the host.
+        ansible_connection: containers.podman.podman
+        ansible_user: root
+        # Discovered rather than pinned, because the Target Platforms genuinely
+        # differ: EL9 and EL10 ship /usr/bin/python3, while a stock EL8 has only
+        # /usr/libexec/platform-python (3.6) and no /usr/bin/python3 at all.
+        # Pinning one path makes EL8 fail at "Gathering Facts" -- and pinning
+        # the EL8 path would stop the tests looking like the hosts they stand in
+        # for. `auto_silent` is what a real controller does against this fleet.
+        ansible_python_interpreter: auto_silent
+        # Prefixed so a test container never collides with something the
+        # developer is running on the same host.
+        ansible_host: "molecule-{{ inventory_hostname }}"
+        molecule_container_name: "molecule-{{ inventory_hostname }}"
+      hosts:
+        el8:
+          molecule_image: docker.io/almalinux/8-init
+        el9:
+          molecule_image: docker.io/almalinux/9-init
+        el10:
+          molecule_image: docker.io/almalinux/10-init

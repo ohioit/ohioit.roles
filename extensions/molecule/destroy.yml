@@ -1,0 +1,20 @@
+---
+# Shared across every scenario. The test sequence runs destroy first as well as
+# last, so this has to be safe against a container that was never created.
+
+- name: Destroy the target containers
+  hosts: all
+  gather_facts: false
+  vars:
+    # Must be a play var rather than the `connection:` keyword: ansible_connection
+    # comes from the inventory, and an inventory variable outranks the keyword.
+    # With the keyword alone this play tries to reach a container it is about to
+    # delete -- and fails as unreachable whenever the container is already gone,
+    # which is exactly the case the first destroy of the sequence is for.
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tasks:
+    - name: Remove the container
+      containers.podman.podman_container:
+        name: "{{ molecule_container_name }}"
+        state: absent

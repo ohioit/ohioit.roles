@@ -1,0 +1,67 @@
+---
+# Shared across every scenario. Adding a Windows Target Platform later adds a
+# branch here and a row in tools/molecule_plan.py's PLATFORMS table; no
+# scenario and no workflow changes.
+
+- name: Create the target containers
+  hosts: all
+  gather_facts: false
+  vars:
+    # The containers do not exist yet, so this play cannot reach them over the
+    # podman connection the rest of the scenario uses.
+    #
+    # This has to be a play var, not the play's `connection:` keyword:
+    # ansible_connection is set in the inventory, and an inventory variable
+    # outranks the keyword. Setting `connection: local` here looks right and
+    # does nothing -- the play still tries to connect to a container that does
+    # not exist yet, and reports every host unreachable.
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tasks:
+    - name: Start the container
+      containers.podman.podman_container:
+        name: "{{ molecule_container_name }}"
+        image: "{{ molecule_image }}"
+        state: started
+        # The -init images run systemd as PID 1, which firewalld needs.
+        systemd: always
+        # NET_ADMIN and NET_RAW are what firewalld needs to manage nftables
+        # inside the container. Deliberately NOT privileged: a privileged
+        # container effectively has root on the host, and this runs on shared
+        # GitHub runners as well as on developer laptops.
+        cap_add:
+          - NET_ADMIN
+          - NET_RAW
+        privileged: false
+
+- name: Wait for the containers to finish booting
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Wait for systemd to reach a usable state
+      ansible.builtin.raw: systemctl is-system-running --wait
+      changed_when: false
+      # `degraded` is expected: a container image always has a unit or two that
+      # cannot start. Anything else means the container is not usable, and a
+      # role that runs against a half-booted container fails in ways that look
+      # like role bugs.
+      #
+      # The retry is not belt-and-braces. `--wait` only blocks once systemd is
+      # far enough along to answer at all; run a moment after the container
+      # starts, systemctl cannot reach the bus yet, prints nothing on stdout and
+      # exits non-zero. Without retrying, whether a scenario starts is a race
+      # against how busy the machine is -- which on a shared CI runner it loses
+      # intermittently and for no visible reason.
+      failed_when: false
+      register: boot
+      retries: 30
+      delay: 2
+      until: boot.stdout | trim in ['running', 'degraded']
+
+    - name: Check that the container booted far enough to be usable
+      ansible.builtin.assert:
+        that: boot.stdout | trim in ['running', 'degraded']
+        fail_msg: >-
+          {{ molecule_container_name }} did not boot: systemctl
+          is-system-running said {{ boot.stdout | trim | default('nothing') }}.
+        quiet: true

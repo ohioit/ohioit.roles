@@ -1,0 +1,12 @@
+---
+# Test-only Dependencies: installed to run the tests, never on a user's behalf.
+# The Shipped Dependencies a user gets are in galaxy.yml.
+#
+# containers.podman is declared here even though fedora.linux_system_roles
+# already pulls it in transitively, and it costs nothing at install time because
+# it is already present. It is the difference between "f.lsr stopped depending
+# on containers.podman" surfacing as a one-line dependency error and surfacing
+# as an unreadable Molecule create failure. It is also what keeps this file
+# meaningful as an input to the collection cache key.
+collections:
+  - name: containers.podman
