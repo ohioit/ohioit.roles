@@ -1,0 +1,16 @@
+---
+profile: production
+
+exclude_paths:
+  - .venv/
+  - .ansible/
+  - lanes/
+  - .scratch/
+  - changelogs/
+
+enable_list:
+  # Opt-in. Every role ships meta/argument_specs.yml: it is the source the
+  # README options table is generated from, so a role without one is a role
+  # whose interface is undocumented. tools/defaults_vs_spec.py then checks the
+  # spec against defaults/main.yml so the two cannot drift apart.
+  - role-argument-spec

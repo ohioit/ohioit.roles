@@ -1,0 +1,164 @@
+---
+# Lint and documentation checks. Everything here runs in the `current` Core Lane
+# from the root uv project: running lint twice, once per lane, produces two
+# copies of the same failure.
+#
+# Note there are no `paths:` filters, here or in any other workflow. A required
+# check behind a path filter never reports on a pull request the filter excludes,
+# and the pull request waits forever on a status that will never arrive.
+# Filtering happens inside each workflow instead, and every workflow ends in
+# a Result Job that asserts the skips it expects.
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ansible-lint:
+    name: ansible-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          # Overrides setup-uv's repo-wide default glob, which would give this
+          # job and the 2.16 lane's jobs a single shared cache key. A root lock
+          # bump would then silently cold-start the other lane.
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+      - run: uv run ansible-lint
+
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+      - run: uv run yamllint --strict .
+
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e # v20
+        with:
+          globs: |
+            **/*.md
+            !.venv
+            !.scratch
+            !CHANGELOG.md
+
+  antsibull-docs-lint:
+    name: antsibull-docs lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+      - run: uv run antsibull-docs lint-collection-docs . --plugin-docs --skip-rstcheck
+
+  defaults-vs-spec:
+    name: defaults vs argument spec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+      - run: uv run tools/defaults_vs_spec.py
+
+  tooling-tests:
+    name: Tooling tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+      # tools/molecule_plan.py decides which Molecule jobs run at all, so a bug
+      # in it can produce an empty matrix that reads as a green Molecule Result.
+      # These tests are the only thing standing between that bug and a false
+      # green, which is why they gate rather than advise.
+      - run: uv run pytest
+
+  docs-current:
+    name: Role docs are current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+      # This is the docs *gate*, and it deliberately needs no token: a required
+      # check must not depend on a secret, because pull requests from forks
+      # never receive one. The auto-commit that pushes regenerated docs lives in
+      # role-docs.yml and is NOT required.
+      - name: Regenerate role docs
+        run: ./tools/gen-docs.sh
+      - name: Check the generated blocks are up to date
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Role docs are out of date. Run 'mise run docs' and commit the result."
+            exit 1
+          fi
+
+  result:
+    # The name is the Required Check. It is matched by job name rather than by
+    # workflow, so it must stay unique across every workflow in this repo, and
+    # it must not change: it is maintained by hand in the repository ruleset.
+    name: Lint Result
+    if: always()
+    needs:
+      - ansible-lint
+      - yamllint
+      - markdownlint
+      - antsibull-docs-lint
+      - defaults-vs-spec
+      - tooling-tests
+      - docs-current
+    runs-on: ubuntu-latest
+    steps:
+      # A job skipped by `if:` counts as passing, so this asserts the skips it
+      # expects rather than trusting them. No job in this workflow is ever
+      # skipped by design, so allowed-skips is empty: a skip here means a
+      # `needs:` dependency failed, and that must not read as success.
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}

@@ -1,0 +1,237 @@
+---
+# Role tests: every changed role, on every Target Platform it declares, on every
+# Core Lane that platform supports.
+#
+# Nothing here names a role, a platform or an ansible-core version. The matrix
+# comes from tools/molecule_plan.py, which reads platforms from each role's
+# meta/main.yml and each lane's ansible-core from its uv.lock. Adding a role or
+# moving a lane does not touch this file.
+name: Molecule
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    # Monday 06:00 UTC. Catches upstream drift on a schedule rather than in the
+    # middle of a release.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.molecule_matrix }}
+      has_jobs: ${{ steps.plan.outputs.has_molecule_jobs }}
+      dependency_key: ${{ steps.plan.outputs.dependency_key }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The plan needs the base commit to diff against.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+
+      - name: Collect the changed paths
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only \
+              "origin/${{ github.base_ref }}"...HEAD > changed.txt
+          else
+            : > changed.txt
+          fi
+          echo "count=$(wc -l < changed.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Work out what to test
+        id: plan
+        run: |
+          uv run tools/molecule_plan.py \
+            --event "${{ github.event_name }}" \
+            --changed-files-from changed.txt \
+            ${{ github.event_name == 'schedule' && '--no-cache' || '' }} \
+            --github-output
+
+  test:
+    name: ${{ matrix.name }}
+    needs: plan
+    if: needs.plan.outputs.has_jobs == 'true'
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          # Per-lane, from the plan. setup-uv's default glob is repo-wide, which
+          # would give both Core Lanes one key and let a root lock bump silently
+          # cold-start the 2.16 lane.
+          cache-dependency-glob: ${{ matrix.cache_dependency_glob }}
+
+      # Bought for availability, not speed: Galaxy has been intermittently slow
+      # and failing, stretching jobs toward half an hour. The key is the
+      # *extracted* dependencies plus the test-only requirements, never a hash
+      # of galaxy.yml -- release-please rewrites that file's version line on
+      # every Release PR, and that same rewrite is what makes the Release PR fan
+      # out to every role, so hashing it would guarantee the most expensive run
+      # in the repo always starts cold.
+      #
+      # No restore-keys, deliberately. A prefix fallback restores the previous
+      # tree and installs on top of it, which is exactly how a dependency
+      # removed from galaxy.yml survives in CI forever while breaking for real
+      # users. An exact key means a miss is just a cold install.
+      - name: Restore the collections tree
+        id: collections-cache
+        if: ${{ !matrix.no_cache }}
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.ansible/collections
+          key: collections-${{ needs.plan.outputs.dependency_key }}
+
+      - name: Sync the lane's Python environment
+        run: uv sync --frozen --project "${{ matrix.uv_project }}"
+
+      # Container images are deliberately NOT cached. Pulls measure 2.5-4 s on a
+      # real runner, a cache miss costs ~23 s extra to archive, and the
+      # AlmaLinux N-init images ride floating major tags on purpose -- a cache
+      # keyed on the tag name would serve a stale image indefinitely and quietly
+      # undo the decision to float them.
+      - name: Build and install the collection
+        run: |
+          uv run ansible-galaxy collection build --output-path dist --force
+          uv run ansible-galaxy collection install dist/ohioit-roles-*.tar.gz --force
+
+      - name: Install Test-only Dependencies
+        run: uv run ansible-galaxy collection install -r extensions/molecule/requirements.yml
+
+      - name: Run the scenario
+        env:
+          MOLECULE_PLATFORM: ${{ matrix.platform }}
+        run: |
+          uv run --project "${{ matrix.uv_project }}" \
+            molecule test --scenario-name "${{ matrix.role }}"
+
+  # Only runs on the weekly schedule, and only when something failed. One
+  # tracking issue, reopened and commented on rather than duplicated.
+  report:
+    name: Report weekly failure
+    needs: test
+    if: always() && github.event_name == 'schedule' && needs.test.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const title = 'Weekly Molecule run is failing';
+            const { owner, repo } = context.repo;
+            const run = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const body = `The scheduled Molecule run failed: ${run}
+
+            This run installs Shipped Dependencies fresh from Galaxy rather than
+            from the cache, so a failure here is usually either upstream drift in
+            a floating container image or a dependency that no longer resolves.`;
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'weekly-failure',
+            });
+
+            const issue = existing.data.find((i) => i.title === title);
+            if (issue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['weekly-failure'],
+              });
+            }
+
+  # Closes the tracking issue on the next green weekly run, so the tracker
+  # reflects current reality without anyone tidying it by hand.
+  clear:
+    name: Clear weekly failure
+    needs: test
+    if: always() && github.event_name == 'schedule' && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'weekly-failure',
+            });
+            for (const issue of existing.data) {
+              if (issue.title !== 'Weekly Molecule run is failing') continue;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: 'The weekly Molecule run is green again. Closing.',
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
+
+  result:
+    # The Required Check. Matched by job name, so this must stay unique and must
+    # not change: it is maintained by hand in the repository ruleset.
+    name: Molecule Result
+    if: always()
+    needs:
+      - plan
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      # `test` is skipped by design whenever the plan found no role to test --
+      # a documentation-only pull request, say -- and that must pass. Every
+      # other skip means a `needs:` dependency failed, and alls-green fails on
+      # those because they are not listed here.
+      #
+      # This is the whole reason tools/molecule_plan.py has tests: an empty
+      # matrix reads exactly like "nothing needed testing", so a plan bug would
+      # arrive as a green check.
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
+          allowed-skips: test

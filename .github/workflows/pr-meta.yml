@@ -1,0 +1,123 @@
+---
+# Checks on the pull request itself rather than on its contents: the title that
+# release-please will read, and the changelog fragment that antsibull-changelog
+# will collect.
+name: PR Meta
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      # Without `edited`, fixing a rejected title never clears the check and the
+      # contributor has to push an empty commit to re-run it.
+      - edited
+      # Without these, applying skip-changelog does not clear the fragment check.
+      - labeled
+      - unlabeled
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-title:
+    name: PR title
+    runs-on: ubuntu-latest
+    steps:
+      # The squash-merged title is what release-please reads to decide the
+      # version bump. This depends on a repository setting that GitHub does not
+      # default to: the squash-merge commit message must be "Pull request title
+      # and description". On the default, release-please reads the wrong subject
+      # and version bumps silently stop. See docs/github-repo-settings.md.
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            revert
+            docs
+            chore
+            ci
+            test
+            build
+            refactor
+            style
+          # When a change touches one role, the scope is the role name -- but it
+          # is a convention, not a requirement.
+          requireScope: false
+
+  changelog-fragment:
+    name: Changelog fragment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+
+      - name: Check for a fragment on release-triggering changes
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+        run: |
+          set -euo pipefail
+
+          added=$(git diff --name-only --diff-filter=A \
+            "origin/${{ github.base_ref }}"...HEAD \
+            -- changelogs/fragments/ | grep -v '\.keep$' || true)
+
+          # Release-triggering types, matching the bump rules in
+          # CONTRIBUTING.md.
+          releasing=false
+          if printf '%s' "$PR_TITLE" | grep -qE '^(feat|fix|perf|revert)(\([^)]*\))?!?:'; then
+            releasing=true
+          fi
+          if printf '%s' "$PR_TITLE" | grep -qE '^[a-z]+(\([^)]*\))?!:'; then
+            releasing=true
+          fi
+          if printf '%s' "$PR_BODY" | grep -q 'BREAKING CHANGE:'; then
+            releasing=true
+          fi
+
+          if [ "$releasing" = true ] && [ "$SKIP" != "true" ] && [ -z "$added" ]; then
+            echo "::error::This pull request changes the collection's version, so it needs a changelog fragment."
+            echo "Add one under changelogs/fragments/<short-slug>.yml, or apply the skip-changelog label."
+            exit 1
+          fi
+
+          # Lint whatever fragments are present regardless of the PR type, so a
+          # docs: pull request that adds one still gets it checked. Presence is
+          # required only for release-triggering types; validity always.
+          if [ -n "$(ls -A changelogs/fragments/*.yml 2>/dev/null || true)" ]; then
+            uv run antsibull-changelog lint
+          fi
+
+  result:
+    # The Required Check. Matched by job name, so it must stay unique and
+    # unchanged.
+    name: PR Meta Result
+    if: always()
+    needs:
+      - pr-title
+      - changelog-fragment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
