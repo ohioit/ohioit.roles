@@ -1,0 +1,153 @@
+---
+# The role's interface, and the source the README options table is generated
+# from. ansible-lint's role-argument-spec rule requires this file, and
+# tools/defaults_vs_spec.py checks it against defaults/main.yml so the two
+# cannot drift.
+#
+# This is a minimal spec matching the current defaults: it exists so the docs
+# pipeline is proven on a real role. Fuller descriptions, and the nested option
+# shapes for firewall_rules entries, belong to the later firewall effort.
+argument_specs:
+  main:
+    short_description: Configure firewalld from a simple, layered rule syntax.
+    description:
+      - >-
+        Generates firewalld services, ipsets and rich rules from a list of
+        simple rules, and removes the objects the rules no longer declare.
+      - >-
+        Rules can be layered across a common, group and host scope, and merged
+        by name so a later layer can change one field of an earlier one.
+    options:
+      firewall_advanced:
+        description:
+          - >-
+            Hand C(firewall) to C(fedora.linux_system_roles.firewall) untouched
+            and generate, query and prune nothing.
+        type: bool
+        default: false
+
+      firewall:
+        description:
+          - >-
+            Raw C(fedora.linux_system_roles.firewall) entries, used by advanced
+            mode only.
+        type: list
+        elements: dict
+        default: []
+
+      firewall_rules:
+        description:
+          - >-
+            The simple syntax. Each entry becomes a custom service, an ipset per
+            kind of source address, and a rich rule joining the two.
+        type: list
+        elements: dict
+        default: []
+
+      firewall_zone:
+        description:
+          - Zone the generated objects are placed in. Overridable per rule.
+        type: str
+        default: public
+
+      firewall_prune:
+        description:
+          - >-
+            Remove custom services, ipsets, rich rules and zone services present
+            on the host but not declared in C(firewall_rules) or
+            C(firewall_extra).
+        type: bool
+        default: true
+
+      firewall_extra:
+        description:
+          - >-
+            Raw C(fedora.linux_system_roles.firewall) entries for what the
+            simple syntax cannot express. Applied after the generated ones and
+            never pruned.
+        type: list
+        elements: dict
+        default: []
+
+      firewall_keep:
+        description:
+          - >-
+            Names pruning must never remove. A name that C(firewall_rules) also
+            mentions is dropped from this list, so the list only protects what
+            the rules are silent about.
+        type: list
+        elements: str
+        default:
+          - ssh
+
+      firewall_require_ssh:
+        description:
+          - >-
+            Fail rather than prune when neither C(firewall_rules) nor
+            C(firewall_keep) accounts for ssh.
+        type: bool
+        default: true
+
+      common_firewall_rules:
+        description: [The common layer of C(firewall_rules).]
+        type: list
+        elements: dict
+        default: []
+      group_firewall_rules:
+        description: [The group layer of C(firewall_rules).]
+        type: list
+        elements: dict
+        default: []
+      host_firewall_rules:
+        description: [The host layer of C(firewall_rules).]
+        type: list
+        elements: dict
+        default: []
+
+      common_firewall_extra:
+        description: [The common layer of C(firewall_extra).]
+        type: list
+        elements: dict
+        default: []
+      group_firewall_extra:
+        description: [The group layer of C(firewall_extra).]
+        type: list
+        elements: dict
+        default: []
+      host_firewall_extra:
+        description: [The host layer of C(firewall_extra).]
+        type: list
+        elements: dict
+        default: []
+
+      common_firewall_keep:
+        description: [The common layer of C(firewall_keep).]
+        type: list
+        elements: str
+        default: []
+      group_firewall_keep:
+        description: [The group layer of C(firewall_keep).]
+        type: list
+        elements: str
+        default: []
+      host_firewall_keep:
+        description: [The host layer of C(firewall_keep).]
+        type: list
+        elements: str
+        default: []
+
+      common_firewall:
+        description: [The common layer of C(firewall).]
+        type: list
+        elements: dict
+        default: []
+      group_firewall:
+        description: [The group layer of C(firewall).]
+        type: list
+        elements: dict
+        default: []
+      host_firewall:
+        description: [The host layer of C(firewall).]
+        type: list
+        elements: dict
+        default: []
