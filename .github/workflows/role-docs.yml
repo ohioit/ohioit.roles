@@ -1,0 +1,70 @@
+---
+# Regenerates role docs and pushes the result to the pull request branch, so
+# forgetting to run `mise run docs` costs a contributor nothing.
+#
+# This is a convenience, NOT a Required Check. The gate is the token-free
+# `docs-current` job in lint.yml. Two reasons they are separate:
+#
+#   * a Required Check must not depend on a secret, and pull requests from forks
+#     never receive one;
+#   * the `main` ruleset dismisses stale approvals on push, so if this job were
+#     required, its own push could dismiss a fresh approval and stall the pull
+#     request it was trying to help.
+#
+# On forks this job fails harmlessly and docs-current tells the contributor what
+# to run.
+name: Role docs
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    name: Regenerate role docs
+    # Not on the Release PR: release-please's branch carries only a version bump
+    # and a changelog, and the generated blocks deliberately hold no version.
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get a token that can push to the pull request branch
+        id: token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          token: ${{ steps.token.outputs.token }}
+          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+      - run: uv sync --frozen
+
+      - name: Regenerate
+        run: ./tools/gen-docs.sh
+
+      - name: Commit and push if anything changed
+        run: |
+          if git diff --quiet; then
+            echo "Role docs are already current."
+            exit 0
+          fi
+          git config user.name "ohioit-roles[bot]"
+          git config user.email "ohioit-roles[bot]@users.noreply.github.com"
+          git add roles/*/README.md
+          git commit -m "docs: regenerate role docs"
+          git push
