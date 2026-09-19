@@ -1,4 +1,7 @@
 ---
-# CHANGE THIS
+# The collection ships no plugins or modules, so there is no Python coverage to
+# report: the template's units and integration jobs were removed along with
+# tests/units/ and tests/integration/. This file stays only so that a future
+# plugin arrives with the path fix already correct.
 fixes:
-   - "/ansible_collections/NAMESPACE/COLLECTION/::"
+  - "/ansible_collections/ohioit/roles/::"
