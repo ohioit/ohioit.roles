@@ -5,5 +5,37 @@ PROJECT_NAME = "{{ config_root | basename }}"
 python.uv_venv_auto = "create|source"
 
 [tools]
+# The `current` Core Lane's controller Python, and the only one this file knows
+# about. The 2.16 lane needs Python 3.12, which uv downloads for
+# lanes/core-2.16/ on its own -- deliberately, so the dev environment is not
+# pinned to the oldest lane's interpreter.
+#
+# Renovate is configured not to touch this version: moving it is a hand-made,
+# dedicated pull request.
 "python" = "3.14"
 "uv" = "0.12.15"
+
+[tasks.molecule]
+description = "Run a role's Molecule scenario: molecule <role> [platform] [--lane 2.16|current]"
+run = "tools/run-molecule.sh"
+
+[tasks.docs]
+description = "Regenerate the generated options block in every role README"
+run = "tools/gen-docs.sh"
+
+[tasks.lint]
+description = "Everything lint.yml runs, except the Molecule scenarios"
+run = [
+    "uv run ansible-lint",
+    "uv run yamllint .",
+    "uv run antsibull-docs lint-collection-docs . --plugin-docs --skip-rstcheck",
+    "uv run tools/defaults_vs_spec.py",
+]
+
+[tasks.test]
+description = "Run the tests for the repo's own tooling"
+run = "uv run pytest"
+
+[tasks.changelog]
+description = "Lint the changelog fragments in this branch"
+run = "uv run antsibull-changelog lint"
