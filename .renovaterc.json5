@@ -1,8 +1,13 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // `fix(deps)` would demand a changelog fragment and bump the collection.
   semanticCommits: "enabled",
   semanticCommitType: "chore",
+
   packageRules: [
+    // Two rules on purpose. A packageRule that matches nothing is ignored
+    // silently, so neither name is trusted alone. Keep both.
     {
       matchDatasources: ["galaxy-collection", "galaxy"],
       enabled: false,
@@ -13,6 +18,8 @@
       enabled: false,
       description: "Collection versions are maintained by hand (by manager)."
     },
+    // Unscoped by manager on purpose: scoping it matched nothing, and Renovate
+    // moved the 2.16 lane to Python 3.14.
     {
       matchDepNames: ["python", "python-version"],
       enabled: false,

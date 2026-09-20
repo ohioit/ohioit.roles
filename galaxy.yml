@@ -15,14 +15,12 @@ tags:
   - sysops
   - windows
 
-# Shipped Dependencies: every collection our roles need, installed for anyone
-# who installs ohioit.roles. Ranges are maintained by hand -- Renovate's
-# ansible-galaxy manager is disabled in .renovaterc.json5 on purpose.
+# Ranges are hand-maintained; Renovate's ansible-galaxy manager is off.
 #
-# ansible.posix is declared directly even though fedora.linux_system_roles
-# already requires it: roles/firewall calls ansible.posix.firewalld itself, and
-# a role should not rely on another collection's dependency list for a module
-# it calls by name.
+# ansible.posix is declared even though f.lsr requires it too, because
+# roles/firewall calls ansible.posix.firewalld by name. Our range has to stay
+# compatible with f.lsr's, so move the two together: f.lsr 2.4.2 requires
+# ansible.posix <2.2.0, and 2.5.0 relaxes it to "*".
 dependencies:
   fedora.linux_system_roles: "2.4.2"
   ansible.posix: ">=2.1.0,<2.2.0"

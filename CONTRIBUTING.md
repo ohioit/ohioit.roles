@@ -102,8 +102,4 @@ it cannot, so run `mise run docs` and commit the result.
 
 - `docs/github-repo-settings.md` — settings a human applies by hand, and the
   one-time provisioning steps an agent cannot do for you.
-- Comments in the file that implements a decision. Where something looks
-  redundant or roundabout — the cache key that ignores `galaxy.yml`'s version
-  line, the per-lane uv cache glob, the images that are deliberately not
-  cached — the comment next to it says why, because that is where the next
-  person will be standing when they wonder.
+- Comments, kept short, only where code looks redundant or wrong without them.
