@@ -18,12 +18,18 @@ tags:
 # Ranges are hand-maintained; Renovate's ansible-galaxy manager is off.
 #
 # ansible.posix is declared even though f.lsr requires it too, because
-# roles/firewall calls ansible.posix.firewalld by name. Our range has to stay
-# compatible with f.lsr's, so move the two together: f.lsr 2.4.2 requires
-# ansible.posix <2.2.0, and 2.5.0 relaxes it to "*".
+# roles/firewall calls ansible.posix.firewalld by name. f.lsr 2.5.0 declares
+# ansible.posix "*", so the range below is now the only thing pinning it.
+#
+# community.general has a ceiling and no floor: no role calls it, so we have no
+# opinion on how new it must be -- only that 12.x requires ansible-core 2.17 and
+# 13.x requires 2.18, which would make meta/runtime.yml's `requires_ansible:
+# >=2.16.0` untrue. f.lsr 2.5.0 dropped the cap it used to apply for us. Drop
+# this when the 2.16 Core Lane goes.
 dependencies:
-  fedora.linux_system_roles: "2.4.2"
-  ansible.posix: ">=2.1.0,<2.2.0"
+  fedora.linux_system_roles: "2.5.0"
+  ansible.posix: ">=2.2.2,<3.0.0"
+  community.general: "<12.0.0"
 
 repository: https://github.com/ohioit/ohioit.roles
 homepage: https://github.com/ohioit/ohioit.roles
