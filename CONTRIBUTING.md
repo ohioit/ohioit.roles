@@ -83,7 +83,8 @@ bugfixes:
   - firewall - stop pruning ssh when a rule renames the service.
 ```
 
-Role entries start with `<role> - `. A maintainer can waive the requirement with
+Role entries name the role first, as in `firewall - stop pruning ssh`. A
+maintainer can waive the requirement with
 the `skip-changelog` label. Fragments are linted whether or not they are
 required, so a `docs:` pull request that adds one still gets it checked.
 
