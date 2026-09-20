@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
-# Sudo required
+# shellcheck disable=SC2034
 REQUIRES_SUDO=true
 
-DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive
 PKG_MGR=apt
 
 # List of packages to install

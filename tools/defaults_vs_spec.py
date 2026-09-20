@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Check that a role's defaults and its argument spec declare the same variables.
 
 ``meta/argument_specs.yml`` is the source of truth for a role's interface: it is
