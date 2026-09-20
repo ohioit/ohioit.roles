@@ -64,7 +64,9 @@ jobs:
         with:
           globs: |
             **/*.md
-            !.venv
+            !**/.venv
+            !**/node_modules
+            !.ansible
             !.scratch
             !CHANGELOG.md
 
@@ -80,6 +82,10 @@ jobs:
             uv.lock
             pyproject.toml
       - run: uv sync --frozen
+      - name: Install the collection and its dependencies
+        run: |
+          uv run ansible-galaxy collection build --output-path dist --force
+          uv run ansible-galaxy collection install dist/ohioit-roles-*.tar.gz --force
       - run: uv run antsibull-docs lint-collection-docs . --plugin-docs --skip-rstcheck
 
   defaults-vs-spec:

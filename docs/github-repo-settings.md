@@ -58,15 +58,15 @@ fail.
 ## The `main` ruleset
 
 - [ ] Require a pull request before merging.
-  - [ ] **1 approval.**
-  - [ ] Require review from Code Owners (`.github/CODEOWNERS`).
-  - [ ] Dismiss stale approvals when new commits are pushed.
-  - [ ] Require conversation resolution before merging.
+    - [ ] **1 approval.**
+    - [ ] Require review from Code Owners (`.github/CODEOWNERS`).
+    - [ ] Dismiss stale approvals when new commits are pushed.
+    - [ ] Require conversation resolution before merging.
 - [ ] Require status checks to pass — exactly these four, and no others:
-  - `Lint Result`
-  - `Sanity Result`
-  - `Molecule Result`
-  - `PR Meta Result`
+    - `Lint Result`
+    - `Sanity Result`
+    - `Molecule Result`
+    - `PR Meta Result`
 - [ ] Require linear history.
 - [ ] Block force pushes.
 - [ ] Restrict deletions.
@@ -94,7 +94,6 @@ unique across the repository and fixed for its life.
 Adding a role, adding a lint tool, or moving the current Core Lane from 2.21 to
 2.22 changes the jobs *behind* a Result Job and never this list. That matters
 because this list is maintained by hand.
-
 
 Not required, on purpose:
 
