@@ -1,4 +1,48 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  packageRules: []
+
+  // The self-hosted Renovate instance already applies config:best-practices and
+  // runs lock file maintenance weekly. Everything this repo needs on top of that
+  // is below -- three rules, and nothing else.
+  //
+  // Nothing automerges. Renovate's stock `chore(deps):` titles pass the PR-title
+  // check and trigger no release, so its pull requests never need a changelog
+  // fragment.
+
+  packageRules: [
+    {
+      // Collection dependencies are not Renovate's job. galaxy.yml's ranges and
+      // extensions/molecule/requirements.yml are maintained by hand: a
+      // collection version bump is a decision about what our users receive, and
+      // it changes the CI cache key.
+      matchManagers: ["ansible-galaxy"],
+      enabled: false,
+      description: "Collection dependencies are maintained by hand.",
+    },
+    {
+      // The Python interpreter moves only in a deliberate, hand-made pull
+      // request. Bumping it silently would move the current Core Lane's
+      // controller Python underneath a locked environment, and the CI matrix
+      // Pythons are set in tools/molecule_plan.py, not here.
+      //
+      // Python *packages* are unaffected: this matches the interpreter only.
+      matchDepNames: ["python", "python-version"],
+      matchManagers: ["mise", "pep621", "github-actions", "devcontainer"],
+      enabled: false,
+      description: "The Python interpreter version is locked; moving it is its own PR.",
+    },
+    {
+      // The 2.16 Core Lane exists to test the oldest ansible-core we support.
+      // Letting Renovate bump it out of its own definition would leave the lane
+      // named 2.16 and testing something else.
+      //
+      // Molecule and ansible-compat get no advance cap here. If a release drops
+      // 2.16, its Renovate PR fails in this lane: close it, pin the package,
+      // and add an allowedVersions cap with a comment saying why.
+      matchFileNames: ["lanes/core-2.16/**"],
+      matchPackageNames: ["ansible-core"],
+      allowedVersions: "<2.17",
+      description: "Hold the 2.16 lane at ansible-core 2.16.",
+    },
+  ],
 }
