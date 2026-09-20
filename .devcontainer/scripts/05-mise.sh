@@ -20,6 +20,8 @@ add_line_if_missing() {
   fi
 }
 
+# shellcheck disable=SC2016
 add_line_if_missing "$HOME/.bashrc" 'eval "$(mise activate bash)"'
+# shellcheck disable=SC2016
 add_line_if_missing "$HOME/.zshrc" 'eval "$(mise activate zsh)"'
 add_line_if_missing "$HOME/.config/fish/config.fish" 'mise activate fish | source'

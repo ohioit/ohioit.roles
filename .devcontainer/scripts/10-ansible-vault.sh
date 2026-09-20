@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 ANSIBLE_CONFIG="${HOST_HOME}/.ansible.cfg"

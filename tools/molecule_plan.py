@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Work out what CI should run, and emit the matrices for it.
 
 This is the only file in the repository that holds the Core Lane table, and the

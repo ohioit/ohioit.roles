@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Define the directory
 SCRIPT_DIR="$PROJECT_HOME/.devcontainer/scripts"
 
-echo $SCRIPT_DIR
+echo "$SCRIPT_DIR"
 
 # Check if the directory exists
 if [[ -d "$SCRIPT_DIR" ]]; then
