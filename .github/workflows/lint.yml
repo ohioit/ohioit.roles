@@ -136,8 +136,13 @@ jobs:
       # check must not depend on a secret, because pull requests from forks
       # never receive one. The auto-commit that pushes regenerated docs lives in
       # role-docs.yml and is NOT required.
+      # Keep identical to the `docs` task in .mise.toml.
       - name: Regenerate role docs
-        run: ./tools/gen-docs.sh
+        run: |
+          for role in roles/*/; do
+            uv run aar-doc --output-mode inject \
+              --output-template tools/aar-doc-template.md.j2 "$role" markdown
+          done
       - name: Check the generated blocks are up to date
         run: |
           if ! git diff --exit-code; then

@@ -1,7 +1,7 @@
 ---
 # Checks on the pull request itself rather than on its contents: the title that
-# release-please will read, and the changelog fragment that antsibull-changelog
-# will collect.
+# the release tooling will read, and the changelog fragment that
+# antsibull-changelog will collect.
 name: PR Meta
 
 on:
@@ -30,11 +30,9 @@ jobs:
     name: PR title
     runs-on: ubuntu-latest
     steps:
-      # The squash-merged title is what release-please reads to decide the
-      # version bump. This depends on a repository setting that GitHub does not
-      # default to: the squash-merge commit message must be "Pull request title
-      # and description". On the default, release-please reads the wrong subject
-      # and version bumps silently stop. See docs/github-repo-settings.md.
+      # The title is what tools/next_version.py reads to decide the version
+      # bump. It scans every commit subject since the last tag, so this works
+      # whether the repository squash-merges or merge-commits.
       - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
