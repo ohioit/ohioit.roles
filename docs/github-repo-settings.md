@@ -30,13 +30,13 @@ fail.
 
 ## Merge settings
 
-- [ ] **Allow squash merging only.** Turn off merge commits and rebase merging.
-      Release-please reads the history on `main` as one commit per pull request.
+- [ ] **Allow squash merging only.** Turn off merge commits and rebase merging,
+      so `main` reads as one commit per pull request.
 - [ ] **Squash merge commit message: "Pull request title and description".**
 
-  > Recommended, not required. `tools/next_version.py` reads every commit
-  > subject since the last tag, so version bumps work with merge commits too.
-  > This setting just keeps the history on `main` readable.
+  > Both are readability preferences, not requirements. Nothing parses commit
+  > subjects to pick a version -- a person sets it in `galaxy.yml` when cutting
+  > the release -- so merge commits break nothing.
 
 - [ ] Automatically delete head branches after merge. (Optional, just tidy.)
 
@@ -56,7 +56,7 @@ fail.
 - [ ] Block force pushes.
 - [ ] Restrict deletions.
 - [ ] **Empty bypass list.** The App pushes to pull request branches, never to
-      `main`; the Release PR merges through the normal path like anything else.
+      `main`; the release pull request merges through the normal path like anything else.
 
 Deliberately **not** enabled:
 
@@ -66,7 +66,7 @@ Deliberately **not** enabled:
   weekly Molecule run catch the rare semantic conflict. Revisit both together if
   merge volume makes it hurt.
 
-Consequence accepted: the Release PR and every Renovate pull request need a
+Consequence accepted: the release pull request and every Renovate pull request need a
 teammate's approval.
 
 ## Why the required list is exactly four names

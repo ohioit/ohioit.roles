@@ -2,14 +2,12 @@
 # Publishes a release to public Ansible Galaxy under the ohioit namespace.
 #
 # Publishing is a separate step from cutting the release, and today it only ever
-# runs because a human started it. The `workflow_call` entry point exists so
-# that turning on automatic publishing later is setting a repository variable
-# (GALAXY_PUBLISH_ENABLED) rather than rewriting the release pipeline.
+# runs because a person started it. Two things are needed before it can work:
 #
-# Before this can work, two human-only steps:
 #   1. a dedicated Galaxy service account owning the ohioit namespace;
 #   2. its API key stored as ANSIBLE_GALAXY_API_KEY in the `galaxy` environment,
 #      which is restricted to tags.
+#
 # See docs/github-repo-settings.md.
 name: Publish to Galaxy
 
@@ -18,11 +16,6 @@ on:
     inputs:
       tag:
         description: The release tag to publish, e.g. 0.1.0
-        required: true
-        type: string
-  workflow_call:
-    inputs:
-      tag:
         required: true
         type: string
 
@@ -35,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     # The API key lives here rather than in repository secrets, so it is not
     # readable from an arbitrary branch. Add a required reviewer when publishing
-    # becomes automatic.
+    # becomes routine.
     environment: galaxy
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -48,20 +41,20 @@ jobs:
           cache-dependency-glob: |
             uv.lock
             pyproject.toml
-      - run: uv sync --frozen
 
-      # Downloaded from the release rather than rebuilt, so what reaches Galaxy
-      # is the artifact that was reviewed and attached.
-      - name: Fetch the release tarball
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p dist
-          gh release download "${{ inputs.tag }}" --pattern '*.tar.gz' --dir dist
-
-      - name: Publish
+      # Built and published with the ansible-core this repository pins, so the
+      # tarball that reaches Galaxy comes from the toolchain the tests ran on.
+      # The version is whatever galaxy.yml holds at this tag, so nothing passed
+      # in here can disagree with what was tagged.
+      #
+      # Deliberately not a third-party publishing action: the ones available run
+      # from a mutable container tag, so pinning the action does not pin the code
+      # that would receive this API key.
+      - name: Build and publish
         env:
           ANSIBLE_GALAXY_API_KEY: ${{ secrets.ANSIBLE_GALAXY_API_KEY }}
         run: |
+          uv sync --frozen
+          uv run ansible-galaxy collection build --output-path dist --force
           uv run ansible-galaxy collection publish dist/*.tar.gz \
             --api-key "$ANSIBLE_GALAXY_API_KEY"

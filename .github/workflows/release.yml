@@ -63,17 +63,16 @@ jobs:
           uv sync --frozen
           uv run ansible-galaxy collection build --output-path dist --force
 
-      # --generate-notes lets GitHub list the merged pull requests, rather than
-      # us maintaining a changelog parser. The curated, user-facing notes are in
-      # CHANGELOG.md, which the release commit adds and the tag points at.
+      # generate_release_notes lets GitHub list the merged pull requests, rather
+      # than us maintaining a parser to pull one version's section out of
+      # CHANGELOG.md. That file stays the curated record, added by the release
+      # commit this tag points at.
       - name: Tag and publish
         if: steps.check.outputs.release == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.check.outputs.version }}
-        run: |
-          gh release create "$VERSION" \
-            --title "$VERSION" \
-            --generate-notes \
-            --target "$GITHUB_SHA" \
-            dist/*.tar.gz
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          tag_name: ${{ steps.check.outputs.version }}
+          name: ${{ steps.check.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: dist/*.tar.gz

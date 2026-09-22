@@ -185,8 +185,8 @@ def test_the_cache_key_ignores_the_version_line(repo):
     repo.write("galaxy.yml", galaxy.replace("version: 0.0.0", "version: 0.1.0"))
     after = repo.plan(changed=[])["dependency_key"]
 
-    # Every Release PR rewrites this line, and that same rewrite is what makes
-    # the Release PR fan out to every role. Hashing the file would guarantee the
+    # Every release pull request rewrites this line, and that same rewrite is what makes
+    # the release pull request fan out to every role. Hashing the file would guarantee the
     # most expensive run in the repo always starts cold.
     assert before == after
 
