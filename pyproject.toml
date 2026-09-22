@@ -2,7 +2,7 @@
 # The `current` Core Lane, and every dev tool the repo uses.
 #
 # This project's version has nothing to do with the collection's version, which
-# lives in galaxy.yml and is set by release-please.
+# lives in galaxy.yml and is set by hand when a release is cut.
 #
 # The second Core Lane is a separate, separately locked project at
 # lanes/core-2.16/, because ansible-core 2.16 stops at Python 3.12 and no single

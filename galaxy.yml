@@ -62,8 +62,6 @@ build_ignore:
   - .ansible-lint-ignore
 
   # Build, test and release tooling
-  - .release-please-manifest.json
-  - release-please-config.json
   - codecov.yml
   - extensions
   - lanes

@@ -30,9 +30,10 @@ jobs:
     name: PR title
     runs-on: ubuntu-latest
     steps:
-      # The title is what tools/next_version.py reads to decide the version
-      # bump. It scans every commit subject since the last tag, so this works
-      # whether the repository squash-merges or merge-commits.
+      # Conventional Commits are what make the history readable and tell a
+      # reviewer whether a change is user-facing. The type also decides whether
+      # a changelog fragment is required, below. It does not pick the version:
+      # a person does that when cutting the release, per CONTRIBUTING.md.
       - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
