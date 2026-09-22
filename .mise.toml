@@ -21,13 +21,21 @@ run = "tools/run-molecule.sh"
 
 [tasks.docs]
 description = "Regenerate the generated options block in every role README"
-run = "tools/gen-docs.sh"
+# Keep identical to the docs-current step in .github/workflows/lint.yml. If they
+# drift, that check goes red, which is what it is for.
+run = "for role in roles/*/; do uv run aar-doc --output-mode inject --output-template tools/aar-doc-template.md.j2 \"$role\" markdown; done"
+
+[tasks.release]
+description = "Collect the changelog fragments for the version in galaxy.yml"
+# Reads the version from galaxy.yml, writes CHANGELOG.md and
+# changelogs/changelog.yaml, and removes the fragments it consumed.
+run = "uv run antsibull-changelog release"
 
 [tasks.lint]
 description = "Everything lint.yml runs, except the Molecule scenarios"
 run = [
     "uv run ansible-lint",
-    "uv run yamllint .",
+    "uv run yamllint --strict .",
     "uv run antsibull-docs lint-collection-docs . --plugin-docs --skip-rstcheck",
     "uv run tools/defaults_vs_spec.py",
 ]
@@ -37,5 +45,5 @@ description = "Run the tests for the repo's own tooling"
 run = "uv run pytest"
 
 [tasks.changelog]
-description = "Lint the changelog fragments in this branch"
+description = "Lint the changelog fragments on this branch"
 run = "uv run antsibull-changelog lint"

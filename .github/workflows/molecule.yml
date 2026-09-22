@@ -89,10 +89,10 @@ jobs:
       # Bought for availability, not speed: Galaxy has been intermittently slow
       # and failing, stretching jobs toward half an hour. The key is the
       # *extracted* dependencies plus the test-only requirements, never a hash
-      # of galaxy.yml -- release-please rewrites that file's version line on
-      # every Release PR, and that same rewrite is what makes the Release PR fan
-      # out to every role, so hashing it would guarantee the most expensive run
-      # in the repo always starts cold.
+      # of galaxy.yml -- the release pull request rewrites that file's version
+      # line, and that same rewrite is what makes it fan out to every role, so
+      # hashing it would guarantee the most expensive run in the repo always
+      # starts cold.
       #
       # No restore-keys, deliberately. A prefix fallback restores the previous
       # tree and installs on top of it, which is exactly how a dependency

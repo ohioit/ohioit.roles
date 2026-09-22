@@ -112,13 +112,13 @@ PLATFORM_NAME_ALIASES = {"el": "el"}
 
 #: A change to any of these reaches every role, so every role is tested.
 #:
-#: .release-please-manifest.json and galaxy.yml are both rewritten by the
-#: Release PR, which is exactly why that pull request fans out to everything --
-#: without depending on its branch name, which release-please is free to change.
+#: galaxy.yml is rewritten by the release pull request, which is exactly why
+#: that pull request fans out to everything -- without depending on its branch
+#: name.
 FANOUT_PATTERNS: tuple[str, ...] = (
     "galaxy.yml",
-    ".release-please-manifest.json",
-    "release-please-config.json",
+    "CHANGELOG.md",
+    "changelogs/**",
     "pyproject.toml",
     "uv.lock",
     ".mise.toml",
@@ -232,8 +232,8 @@ def dependency_cache_key(repo_root: Path) -> str:
     """Key for the ~/.ansible/collections cache.
 
     Derived from the *extracted* ``dependencies`` mapping rather than a hash of
-    galaxy.yml, because release-please rewrites that file's version line on
-    every Release PR -- the single most expensive run in the repo, since the
+    galaxy.yml, because the release pull request rewrites that file's version
+    line -- the single most expensive run in the repo, since the
     same rewrite is what makes it fan out to every role. Hashing the file would
     guarantee that run starts cold.
 

@@ -3,7 +3,7 @@
 
 namespace: ohioit
 name: roles
-version: 0.0.0 # x-release-please-version
+version: 0.0.0
 readme: README.md
 authors:
   - Kyle Barstow <barstown@ohio.edu> (https://github.com/barstown)

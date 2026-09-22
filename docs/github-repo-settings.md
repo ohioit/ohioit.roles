@@ -13,24 +13,11 @@ admin actually clicks.
 Steps an agent cannot do. Until these are done, the checks that depend on them
 fail.
 
-- [ ] **Create a GitHub App** in the `ohioit` org and install it on this
-      repository. It needs `contents: write` and `pull-requests: write`.
-      Store its app ID as the repository variable `APP_ID` and its private key
-      as the secret `APP_PRIVATE_KEY`.
+> **No GitHub App is needed.** Releases are cut by a maintainer running
+> `mise run release`, which opens an ordinary pull request from their own
+> credentials. CI only tags and publishes after it merges, which the stock
+> `GITHUB_TOKEN` can do. See CONTRIBUTING.md for the three steps.
 
-  > **Needs an org owner.** Creating an App is an organisation-level permission,
-  > so this is the item to hand to someone who has it if you do not. It is also
-  > the only blocker for the release pipeline.
-  >
-  > **Until it exists**, `release-please.yml` fails on every push to `main` and
-  > `role-docs.yml` fails on every pull request. Both are expected and neither
-  > is a Required Check, so merging still works — but they are red, and a red
-  > check people learn to ignore is worse than no check. Do this before the
-  > habit sets in.
-
-  Used by `release-please.yml` and `role-docs.yml`. A push made with the stock
-  `GITHUB_TOKEN` does not start workflows, so without the App the Release PR
-  would sit with no checks and could never satisfy the Required Checks.
 - [ ] **Create the `skip-changelog` label.** Labels are created by hand; there is
       no labels-as-code sync. The five labels `.github/labeler.yml` manages
       (`actions`, `devcontainer`, `documentation`, `roles`, `firewall`) already
@@ -47,11 +34,9 @@ fail.
       Release-please reads the history on `main` as one commit per pull request.
 - [ ] **Squash merge commit message: "Pull request title and description".**
 
-  > This one is load-bearing and its default is wrong for us. On GitHub's
-  > default setting the squashed commit's subject is `<PR title> (#123)` built
-  > from a different source, and release-please reads the wrong subject: version
-  > bumps stop happening, silently and with no failing check. If bumps ever stop,
-  > check this first.
+  > Recommended, not required. `tools/next_version.py` reads every commit
+  > subject since the last tag, so version bumps work with merge commits too.
+  > This setting just keeps the history on `main` readable.
 
 - [ ] Automatically delete head branches after merge. (Optional, just tidy.)
 
@@ -99,39 +84,27 @@ Not required, on purpose:
 
 - `Labeler` — needs `pull-requests: write`, so it fails on fork pull requests by
   design.
-- The `role-docs.yml` auto-commit — it depends on a secret forks never get, and
-  its push could dismiss a fresh approval. The docs *gate* is `docs-current`
-  inside `Lint Result`, which needs no token.
-- `release-please` and `publish` — neither runs on a pull request.
+- There is no docs auto-commit. The docs *gate* is `docs-current` inside
+  `Lint Result`, which needs no token; contributors run `mise run docs`.
+- `Release` — does not run on a pull request.
 
 ## Environments
 
 - [ ] **`galaxy`** — holds `ANSIBLE_GALAXY_API_KEY`. Restrict to tags. No
       required reviewer for now; add one when publishing becomes automatic.
 
-## The first release must be 0.1.0
+## Cutting a release
 
-Check this once, on the first Release PR release-please opens, and then never
-again.
+1. Set `version:` in `galaxy.yml`.
+2. `mise run release` — collects the changelog fragments.
+3. Commit both, push, open a pull request.
 
-The manifest starts at `0.0.0` and `bump-patch-for-minor-pre-major` makes a
-`feat` a patch, so left alone the first release would be `0.0.1`. A
-`Release-As: 0.1.0` footer is already in the commit that declared the supported
-range, which should be enough.
-
-If the first Release PR says `0.0.1` anyway, force it:
-
-```bash
-git switch main && git pull
-git commit --allow-empty -m "chore: force the first release" -m "Release-As: 0.1.0"
-git push
-```
-
-`1.0.0` stays a deliberate declaration of stability, made later and on purpose.
+Merging it tags the version and publishes the GitHub Release with the tarball.
+See CONTRIBUTING.md for how to choose the version. The first release is `0.1.0`;
+`1.0.0` stays a deliberate declaration of stability.
 
 ## Variables
 
-- `APP_ID` — the GitHub App's ID.
 - `GALAXY_PUBLISH_ENABLED` — **leave unset.** Setting it to `true` is what turns
   on automatic publishing on release. Until then `publish-galaxy.yml` runs only
   when someone starts it by hand.

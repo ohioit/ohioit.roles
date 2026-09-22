@@ -24,6 +24,7 @@ need to install anything for it.
 | `mise run docs` | Regenerate the options block in every role README |
 | `mise run molecule <role> [platform] [--lane 2.16\|current]` | Run a role's scenario |
 | `mise run changelog` | Lint the changelog fragments on your branch |
+| `mise run release` | Collect the fragments into the changelog (maintainers) |
 
 ## Running the role tests
 
@@ -95,8 +96,32 @@ is on the summary and the detail is in the job behind it.
 On a pull request, Molecule runs only the roles you touched. Changing shared test
 plumbing, `galaxy.yml` or either lane's lock file runs everything.
 
-If role docs are out of date, CI regenerates and pushes them for you. On a fork
-it cannot, so run `mise run docs` and commit the result.
+If role docs are out of date, the `docs-current` check fails and tells you to
+run `mise run docs` and commit the result.
+
+## Cutting a release
+
+Three steps, all ordinary git.
+
+1. Edit `version:` in `galaxy.yml` to the new version.
+2. Run `mise run release`. It collects the changelog fragments into
+   `CHANGELOG.md` and deletes them.
+3. Commit both on a branch, push, and open a pull request titled
+   `chore(release): X.Y.Z`.
+
+Merging it tags the version and publishes a GitHub Release with the collection
+tarball attached. Nothing else is needed.
+
+Choose the version yourself, by what changed since the last release:
+
+| Since the last release | New version |
+| --- | --- |
+| Bug fixes only | patch — `0.1.0` to `0.1.1` |
+| New features | patch before 1.0, minor after |
+| Breaking changes | minor before 1.0, major after |
+
+Before 1.0, breaking changes only bump the minor, so reaching `1.0.0` stays a
+deliberate decision rather than something a rename does by accident.
 
 ## Where decisions live
 

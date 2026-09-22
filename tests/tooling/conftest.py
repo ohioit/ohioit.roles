@@ -156,7 +156,7 @@ def repo(tmp_path: Path) -> Repo:
             ---
             namespace: ohioit
             name: roles
-            version: 0.0.0 # x-release-please-version
+            version: 0.0.0
             dependencies:
               fedora.linux_system_roles: "2.4.2"
               ansible.posix: ">=2.1.0,<2.2.0"

@@ -1,0 +1,7 @@
+---
+minor_changes:
+  - >-
+    Releases no longer require a GitHub App. A maintainer sets the version in
+    ``galaxy.yml``, runs ``mise run release`` to collect the changelog
+    fragments, and opens a pull request; merging it tags the version and
+    publishes the GitHub Release using only the stock workflow token.

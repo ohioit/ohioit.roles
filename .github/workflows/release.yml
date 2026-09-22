@@ -1,0 +1,79 @@
+---
+# Tags and publishes a release once its pull request is merged.
+#
+# A person does the first half by hand, in three steps (see CONTRIBUTING.md):
+# bump `version:` in galaxy.yml, run `mise run release` to collect the changelog
+# fragments, and open a pull request like any other change. Because a person
+# pushes that branch, every required check runs on it.
+#
+# This workflow then does the rest. It pushes no commits and opens no pull
+# requests, so the stock GITHUB_TOKEN is enough -- that token can create tags and
+# releases, it just cannot push a commit in a way that starts workflows, which is
+# what would otherwise force a GitHub App.
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Should we release?
+        id: check
+        run: |
+          set -euo pipefail
+          version="$(grep -m1 '^version:' galaxy.yml | cut -d: -f2 | tr -d ' "')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # The tag is the guard, not the commit message. That makes this job
+          # idempotent: every push to main runs it, and only the one that
+          # introduces a new version finds no tag and goes ahead.
+          if [ "$version" = "0.0.0" ] || git rev-parse "refs/tags/$version" >/dev/null 2>&1; then
+            echo "Nothing to release ($version)."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Releasing $version."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        if: steps.check.outputs.release == 'true'
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+
+      - name: Build the collection
+        if: steps.check.outputs.release == 'true'
+        run: |
+          uv sync --frozen
+          uv run ansible-galaxy collection build --output-path dist --force
+
+      # --generate-notes lets GitHub list the merged pull requests, rather than
+      # us maintaining a changelog parser. The curated, user-facing notes are in
+      # CHANGELOG.md, which the release commit adds and the tag points at.
+      - name: Tag and publish
+        if: steps.check.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --generate-notes \
+            --target "$GITHUB_SHA" \
+            dist/*.tar.gz

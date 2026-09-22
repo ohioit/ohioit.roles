@@ -72,7 +72,8 @@ def test_collection_wide_changes_run_every_role(repo):
 
     for path in (
         "galaxy.yml",
-        ".release-please-manifest.json",
+        "CHANGELOG.md",
+        "changelogs/fragments/x.yml",
         "lanes/core-2.16/uv.lock",
         "uv.lock",
         "pyproject.toml",
@@ -88,8 +89,9 @@ def test_collection_wide_changes_run_every_role(repo):
 
 def test_the_release_pull_request_fans_out_without_knowing_its_branch_name(repo):
     repo.add_role("motd")
-    # release-please rewrites exactly these two files and nothing else.
-    plan = repo.plan(changed=["galaxy.yml", ".release-please-manifest.json"])
+    # `mise run release` rewrites exactly these, and nothing about the branch
+    # name is relied on.
+    plan = repo.plan(changed=["galaxy.yml", "CHANGELOG.md"])
 
     assert plan["roles"] == ["firewall", "motd"]
 
