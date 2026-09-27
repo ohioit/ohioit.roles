@@ -15,7 +15,7 @@ dependencies = [
     # the whole lane, sanity tests included, and is merged by hand when green.
     "ansible-core==2.21.4",
     # Role testing. Molecule drives the scenarios in extensions/molecule/.
-    "molecule==26.8.0",
+    "molecule==26.9.0",
     # Lint and docs. These run in the current lane only.
     "aar-doc==2.3.0",
     "ansible-lint==26.8.0",
