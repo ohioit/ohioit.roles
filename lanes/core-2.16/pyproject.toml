@@ -22,5 +22,5 @@ dependencies = [
     # Molecule supports only the latest two Ansible versions. If a release drops
     # 2.16, its Renovate PR fails here: close it, pin molecule to the last
     # working version, and add an allowedVersions cap with a comment saying why.
-    "molecule==26.8.0",
+    "molecule==26.9.0",
 ]
