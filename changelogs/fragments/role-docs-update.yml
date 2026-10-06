@@ -1,0 +1,4 @@
+---
+minor_changes:
+  - >-
+    firewall - update role docs in accordance with aar-doc v2.4.0.

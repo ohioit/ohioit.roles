@@ -17,7 +17,7 @@ dependencies = [
     # Role testing. Molecule drives the scenarios in extensions/molecule/.
     "molecule==26.9.0",
     # Lint and docs. These run in the current lane only.
-    "aar-doc==2.3.0",
+    "aar-doc==2.4.0",
     "ansible-lint==26.9.0",
     "antsibull-changelog==0.35.1",
     "antsibull-docs==2.27.0",

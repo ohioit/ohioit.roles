@@ -80,26 +80,26 @@ Configure firewalld from a simple, layered rule syntax.
 
 | Variable | Description | Type | Required | Default |
 | --- | --- | --- | --- | --- |
-| `firewall_advanced` | Hand `firewall` to `fedora.linux_system_roles.firewall` untouched and generate, query and prune nothing. | bool | no | `False` |
-| `firewall` | Raw `fedora.linux_system_roles.firewall` entries, used by advanced mode only. | list of 'dict' | no | `[]` |
-| `firewall_rules` | The simple syntax. Each entry becomes a custom service, an ipset per kind of source address, and a rich rule joining the two. | list of 'dict' | no | `[]` |
-| `firewall_zone` | Zone the generated objects are placed in. Overridable per rule. | str | no | `public` |
-| `firewall_prune` | Remove custom services, ipsets, rich rules and zone services present on the host but not declared in `firewall_rules` or `firewall_extra`. | bool | no | `True` |
-| `firewall_extra` | Raw `fedora.linux_system_roles.firewall` entries for what the simple syntax cannot express. Applied after the generated ones and never pruned. | list of 'dict' | no | `[]` |
-| `firewall_keep` | Names pruning must never remove. A name that `firewall_rules` also mentions is dropped from this list, so the list only protects what the rules are silent about. | list of 'str' | no | `['ssh']` |
-| `firewall_require_ssh` | Fail rather than prune when neither `firewall_rules` nor `firewall_keep` accounts for ssh. | bool | no | `True` |
-| `common_firewall_rules` | The common layer of `firewall_rules`. | list of 'dict' | no | `[]` |
-| `group_firewall_rules` | The group layer of `firewall_rules`. | list of 'dict' | no | `[]` |
-| `host_firewall_rules` | The host layer of `firewall_rules`. | list of 'dict' | no | `[]` |
-| `common_firewall_extra` | The common layer of `firewall_extra`. | list of 'dict' | no | `[]` |
-| `group_firewall_extra` | The group layer of `firewall_extra`. | list of 'dict' | no | `[]` |
-| `host_firewall_extra` | The host layer of `firewall_extra`. | list of 'dict' | no | `[]` |
-| `common_firewall_keep` | The common layer of `firewall_keep`. | list of 'str' | no | `[]` |
-| `group_firewall_keep` | The group layer of `firewall_keep`. | list of 'str' | no | `[]` |
-| `host_firewall_keep` | The host layer of `firewall_keep`. | list of 'str' | no | `[]` |
-| `common_firewall` | The common layer of `firewall`. | list of 'dict' | no | `[]` |
-| `group_firewall` | The group layer of `firewall`. | list of 'dict' | no | `[]` |
-| `host_firewall` | The host layer of `firewall`. | list of 'dict' | no | `[]` |
+| `firewall_advanced` | Hand `firewall` to `fedora.linux_system_roles.firewall` untouched and generate, query and prune nothing. | bool | no | ``False`` |
+| `firewall` | Raw `fedora.linux_system_roles.firewall` entries, used by advanced mode only. | list of `dict` | no | ``[]`` |
+| `firewall_rules` | The simple syntax. Each entry becomes a custom service, an ipset per kind of source address, and a rich rule joining the two. | list of `dict` | no | ``[]`` |
+| `firewall_zone` | Zone the generated objects are placed in. Overridable per rule. | str | no | ``public`` |
+| `firewall_prune` | Remove custom services, ipsets, rich rules and zone services present on the host but not declared in `firewall_rules` or `firewall_extra`. | bool | no | ``True`` |
+| `firewall_extra` | Raw `fedora.linux_system_roles.firewall` entries for what the simple syntax cannot express. Applied after the generated ones and never pruned. | list of `dict` | no | ``[]`` |
+| `firewall_keep` | Names pruning must never remove. A name that `firewall_rules` also mentions is dropped from this list, so the list only protects what the rules are silent about. | list of `str` | no | ``['ssh']`` |
+| `firewall_require_ssh` | Fail rather than prune when neither `firewall_rules` nor `firewall_keep` accounts for ssh. | bool | no | ``True`` |
+| `common_firewall_rules` | The common layer of `firewall_rules`. | list of `dict` | no | ``[]`` |
+| `group_firewall_rules` | The group layer of `firewall_rules`. | list of `dict` | no | ``[]`` |
+| `host_firewall_rules` | The host layer of `firewall_rules`. | list of `dict` | no | ``[]`` |
+| `common_firewall_extra` | The common layer of `firewall_extra`. | list of `dict` | no | ``[]`` |
+| `group_firewall_extra` | The group layer of `firewall_extra`. | list of `dict` | no | ``[]`` |
+| `host_firewall_extra` | The host layer of `firewall_extra`. | list of `dict` | no | ``[]`` |
+| `common_firewall_keep` | The common layer of `firewall_keep`. | list of `str` | no | ``[]`` |
+| `group_firewall_keep` | The group layer of `firewall_keep`. | list of `str` | no | ``[]`` |
+| `host_firewall_keep` | The host layer of `firewall_keep`. | list of `str` | no | ``[]`` |
+| `common_firewall` | The common layer of `firewall`. | list of `dict` | no | ``[]`` |
+| `group_firewall` | The group layer of `firewall`. | list of `dict` | no | ``[]`` |
+| `host_firewall` | The host layer of `firewall`. | list of `dict` | no | ``[]`` |
 
 <!-- END_ANSIBLE_DOCS -->
 
