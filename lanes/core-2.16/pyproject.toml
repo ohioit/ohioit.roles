@@ -15,7 +15,9 @@
 name = "ohioit-roles-core-2-16"
 version = "0.0.0"
 requires-python = "==3.12.*"
-dependencies = [
+
+[dependency-groups]
+dev = [
     # Held below 2.17 by a Renovate rule in .renovaterc.json5. The floor is
     # 2.16.19 because that is what ansible-lint requires of a 2.16 controller.
     "ansible-core>=2.16.19,<2.17",

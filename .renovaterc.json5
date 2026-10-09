@@ -1,10 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-
-  // `fix(deps)` would demand a changelog fragment and bump the collection.
   semanticCommits: "enabled",
-  semanticCommitType: "chore",
-
   packageRules: [
     // Two rules on purpose. A packageRule that matches nothing is ignored
     // silently, so neither name is trusted alone. Keep both.
