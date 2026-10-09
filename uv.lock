@@ -869,7 +869,9 @@ wheels = [
 name = "ohioit-roles-dev"
 version = "0.0.0"
 source = { virtual = "." }
-dependencies = [
+
+[package.dev-dependencies]
+dev = [
     { name = "aar-doc" },
     { name = "ansible-core" },
     { name = "ansible-lint" },
@@ -882,7 +884,9 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [
+
+[package.metadata.requires-dev]
+dev = [
     { name = "aar-doc", specifier = "==2.4.0" },
     { name = "ansible-core", specifier = "==2.21.4" },
     { name = "ansible-lint", specifier = "==26.9.0" },

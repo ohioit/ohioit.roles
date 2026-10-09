@@ -10,7 +10,9 @@
 name = "ohioit-roles-dev"
 version = "0.0.0"
 requires-python = ">=3.14,<3.15"
-dependencies = [
+
+[dependency-groups]
+dev = [
     # Core Lane: `current`. Unpinned by policy -- a Renovate minor bump moves
     # the whole lane, sanity tests included, and is merged by hand when green.
     "ansible-core==2.21.4",
