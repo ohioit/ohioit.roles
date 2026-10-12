@@ -15,7 +15,7 @@ requires-python = ">=3.14,<3.15"
 dev = [
     # Core Lane: `current`. Unpinned by policy -- a Renovate minor bump moves
     # the whole lane, sanity tests included, and is merged by hand when green.
-    "ansible-core==2.21.4",
+    "ansible-core==2.21.5",
     # Role testing. Molecule drives the scenarios in extensions/molecule/.
     "molecule==26.9.0",
     # Lint and docs. These run in the current lane only.
