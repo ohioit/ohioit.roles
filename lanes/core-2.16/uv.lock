@@ -4,7 +4,7 @@ requires-python = "==3.12.*"
 
 [[package]]
 name = "ansible-compat"
-version = "26.9.0"
+version = "26.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ansible-core" },
@@ -13,9 +13,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "subprocess-tee" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/bf/75ac51c0377ffe4863900a1ad4b2726c7cb664dd5da5c33c2c6b4fc3040a/ansible_compat-26.9.0.tar.gz", hash = "sha256:e101649196e4fffc810c3f9f4f185107cc1e5be0ef26d38ad9c4abfa22b0b183", size = 256824, upload-time = "2026-09-22T09:37:17.218Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/44/f9/2074324a0c404e5f7d547fdaaa93042a792c66e2031ba02c972df67aed22/ansible_compat-26.10.0.tar.gz", hash = "sha256:b0fcc0b9585611045b4b91268d3b4337c9159ae0dc550b69a553a33af48af826", size = 256765, upload-time = "2026-10-12T08:35:47.127Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/ad/19b4698bcf4af5e730e1b002eac0a4174ca4088c5178348783735132d041/ansible_compat-26.9.0-py3-none-any.whl", hash = "sha256:6756ba0adee1a07d609ede35483fc563b9838df25ec70e57378ae8b564f185cf", size = 28980, upload-time = "2026-09-22T09:37:15.86Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/d2/09209cd7868af83c7d4f6ad26874f9c933c0a2566c06fe8524bd0a10d810/ansible_compat-26.10.0-py3-none-any.whl", hash = "sha256:700f0778fbb348daf6ee58941871e8ca77a987702993e8bf7895761d036d6450", size = 28994, upload-time = "2026-10-12T08:35:45.522Z" },
 ]
 
 [[package]]
@@ -281,11 +281,11 @@ wheels = [
 
 [[package]]
 name = "pluggy"
-version = "1.6.0"
+version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/db/7fc19e6f2dc92a966727031389fc2e08b558f0f25eb7403c1119ad4713cd/pluggy-1.7.0.tar.gz", hash = "sha256:d1eaa46ebb595891b860ab086b4d09c8588af65ebd4361b8e8f4bb8920b90ba8", size = 123304, upload-time = "2026-10-15T09:50:58.343Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+    { url = "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl", hash = "sha256:7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec", size = 27082, upload-time = "2026-10-15T09:50:56.808Z" },
 ]
 
 [[package]]
