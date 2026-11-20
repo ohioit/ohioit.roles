@@ -2,6 +2,7 @@
 PROJECT_NAME = "{{ config_root | basename }}"
 
 [settings]
+lockfile = true
 python.uv_venv_auto = "create|source"
 
 [tools]
