@@ -1,6 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  semanticCommits: "enabled",
+  extends: [":semanticCommits", "github>ohioit/renovate-presets#2.1.0"],
   packageRules: [
     // Two rules on purpose. A packageRule that matches nothing is ignored
     // silently, so neither name is trusted alone. Keep both.
