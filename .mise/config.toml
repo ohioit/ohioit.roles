@@ -14,7 +14,7 @@ python.uv_venv_auto = "create|source"
 # Renovate is configured not to touch this version: moving it is a hand-made,
 # dedicated pull request.
 "python" = "3.14"
-"uv" = "0.13.8"
+"uv" = "0.13.9"
 
 [tasks.molecule]
 description = "Run a role's Molecule scenario: molecule <role> [platform] [--lane 2.16|current]"
