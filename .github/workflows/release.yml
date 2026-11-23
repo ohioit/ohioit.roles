@@ -69,7 +69,7 @@ jobs:
       # commit this tag points at.
       - name: Tag and publish
         if: steps.check.outputs.release == 'true'
-        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: ${{ steps.check.outputs.version }}
           name: ${{ steps.check.outputs.version }}
